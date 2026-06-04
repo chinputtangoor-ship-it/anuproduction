@@ -9,8 +9,6 @@ const ROLES = ["operator", "supervisor", "manager", "admin"];
 function generatePassword(): string {
   const letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
   const digits  = "23456789";
-  const all     = letters + digits;
-  // อย่างน้อย 2 ตัวเลข + 6 ตัวอักษร แล้ว shuffle
   let pwd = "";
   for (let i = 0; i < 2; i++) pwd += digits[Math.floor(Math.random() * digits.length)];
   for (let i = 0; i < 6; i++) pwd += letters[Math.floor(Math.random() * letters.length)];
@@ -34,14 +32,12 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState({ text: "", type: "" });
 
-  // Add form
   const [fn, setFn] = useState("");
   const [eid, setEid] = useState("");
   const [role, setRole] = useState("operator");
   const [previewUn, setPreviewUn] = useState("");
   const [previewPw, setPreviewPw] = useState("");
 
-  // Edit form
   const [editFn, setEditFn] = useState("");
   const [editEid, setEditEid] = useState("");
   const [editUn, setEditUn] = useState("");
@@ -63,26 +59,20 @@ export default function AccountPage() {
     loadUsers();
   }, []);
 
-  // preview username ขณะพิมพ์ชื่อ
   useEffect(() => {
-    if (fn.trim()) {
-      setPreviewUn(generateUsername(fn));
-    } else {
-      setPreviewUn("");
-    }
+    setPreviewUn(fn.trim() ? generateUsername(fn) : "");
   }, [fn]);
 
-  // สร้าง password ครั้งแรก
   useEffect(() => {
     setPreviewPw(generatePassword());
   }, []);
 
   async function loadUsers() {
-    const { data, error } = await supabase.from("users").select("*").order("fullname");
-    if (error) {
-      showMsg(`❌ โหลดข้อมูลไม่สำเร็จ: ${error.message}`, "error");
-      return;
-    }
+    const { data, error } = await supabase
+      .from("app_users")
+      .select("*")
+      .order("fullname");
+    if (error) { showMsg(`❌ โหลดข้อมูลไม่สำเร็จ: ${error.message}`, "error"); return; }
     setUsers(data || []);
   }
 
@@ -92,23 +82,16 @@ export default function AccountPage() {
   }
 
   async function handleAdd() {
-    if (!fn.trim()) {
-      showMsg("⚠️ กรุณากรอกชื่อ-นามสกุล", "error");
-      return;
-    }
+    if (!fn.trim()) { showMsg("⚠️ กรุณากรอกชื่อ-นามสกุล", "error"); return; }
 
     const finalUn = previewUn || generateUsername(fn);
     const finalPw = previewPw || generatePassword();
 
-    // เช็ค duplicate username
     const dup = users.find(u => u.username === finalUn);
-    if (dup) {
-      showMsg(`❌ Username "${finalUn}" มีในระบบแล้ว กรุณาแก้ชื่อให้ต่างออกไป`, "error");
-      return;
-    }
+    if (dup) { showMsg(`❌ Username "${finalUn}" มีในระบบแล้ว`, "error"); return; }
 
     setSaving(true);
-    const { error } = await supabase.from("users").insert([{
+    const { error } = await supabase.from("app_users").insert([{
       fullname:      fn.trim(),
       emp_id:        eid.trim() || null,
       username:      finalUn,
@@ -117,16 +100,12 @@ export default function AccountPage() {
       first_login:   true,
     }]);
 
-    if (error) {
-      showMsg(`❌ บันทึกไม่สำเร็จ: ${error.message}`, "error");
-      setSaving(false);
-      return;
-    }
+    if (error) { showMsg(`❌ บันทึกไม่สำเร็จ: ${error.message}`, "error"); setSaving(false); return; }
 
     await loadUsers();
     showMsg(`✅ เพิ่มผู้ใช้ "${fn.trim()}" สำเร็จ  |  Username: ${finalUn}  |  Password: ${finalPw}`, "success");
     setFn(""); setEid(""); setRole("operator");
-    setPreviewPw(generatePassword()); // สร้าง password ใหม่สำหรับคนถัดไป
+    setPreviewPw(generatePassword());
     setSaving(false);
   }
 
@@ -139,25 +118,19 @@ export default function AccountPage() {
   }
 
   async function handleSaveEdit() {
-    if (!editFn.trim() || !editUn.trim()) {
-      showMsg("⚠️ ชื่อ-นามสกุล และ Username ห้ามว่าง", "error"); return;
-    }
+    if (!editFn.trim() || !editUn.trim()) { showMsg("⚠️ ชื่อและ Username ห้ามว่าง", "error"); return; }
     const dup = users.find(u => u.username === editUn.trim() && u.id !== editingUser.id);
     if (dup) { showMsg("❌ Username นี้มีคนอื่นใช้แล้ว", "error"); return; }
 
     setSaving(true);
-    const { error } = await supabase.from("users").update({
+    const { error } = await supabase.from("app_users").update({
       fullname: editFn.trim(),
       emp_id:   editEid.trim() || null,
       username: editUn.trim(),
       role:     editRole,
     }).eq("id", editingUser.id);
 
-    if (error) {
-      showMsg(`❌ อัปเดตไม่สำเร็จ: ${error.message}`, "error");
-      setSaving(false);
-      return;
-    }
+    if (error) { showMsg(`❌ อัปเดตไม่สำเร็จ: ${error.message}`, "error"); setSaving(false); return; }
 
     await loadUsers();
     showMsg("🎉 อัปเดตข้อมูลสำเร็จ", "success");
@@ -172,25 +145,21 @@ export default function AccountPage() {
     if (target.username === user?.username) {
       showMsg("❌ ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่", "error"); return;
     }
-    const { error } = await supabase.from("users").delete().eq("id", target.id);
-    if (error) {
-      showMsg(`❌ ลบไม่สำเร็จ: ${error.message}`, "error"); return;
-    }
+    const { error } = await supabase.from("app_users").delete().eq("id", target.id);
+    if (error) { showMsg(`❌ ลบไม่สำเร็จ: ${error.message}`, "error"); return; }
     await loadUsers();
     showMsg(`🗑️ ลบผู้ใช้ "${target.fullname}" เรียบร้อยแล้ว`, "success");
   }
 
   async function handleResetPassword(target: any) {
     const newPw = generatePassword();
-    const { error } = await supabase.from("users").update({
+    const { error } = await supabase.from("app_users").update({
       password_hash: newPw,
       first_login:   true,
     }).eq("id", target.id);
-    if (error) {
-      showMsg(`❌ Reset ไม่สำเร็จ: ${error.message}`, "error"); return;
-    }
+    if (error) { showMsg(`❌ Reset ไม่สำเร็จ: ${error.message}`, "error"); return; }
     await loadUsers();
-    showMsg(`🔑 Reset password ของ "${target.fullname}" สำเร็จ  |  Password ใหม่: ${newPw}`, "success");
+    showMsg(`🔑 Reset password "${target.fullname}" สำเร็จ  |  Password ใหม่: ${newPw}`, "success");
   }
 
   return (
@@ -238,7 +207,6 @@ export default function AccountPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {/* ชื่อ-นามสกุล */}
               <div className="sm:col-span-2">
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ชื่อ-นามสกุล *</p>
                 <input
@@ -251,7 +219,6 @@ export default function AccountPage() {
                 />
               </div>
 
-              {/* รหัสพนักงาน */}
               <div>
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>รหัสพนักงาน</p>
                 <input
@@ -264,7 +231,6 @@ export default function AccountPage() {
                 />
               </div>
 
-              {/* ตำแหน่ง */}
               <div>
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ตำแหน่ง</p>
                 <select
@@ -277,7 +243,6 @@ export default function AccountPage() {
                 </select>
               </div>
 
-              {/* Preview Username + Password */}
               {fn.trim() && (
                 <div className="sm:col-span-2 rounded-lg p-4 flex flex-col gap-2"
                      style={{ background: "var(--color-anu-elevated)", border: "1px solid var(--color-anu-border)" }}>
@@ -329,7 +294,6 @@ export default function AccountPage() {
         {tab === "manage" && (
           <div className="flex flex-col gap-4">
 
-            {/* Edit form */}
             {editingUser && (
               <div className="rounded-xl border p-6 max-w-2xl"
                    style={{ ...cardStyle, borderColor: "var(--color-anu-glow)" }}>
@@ -338,9 +302,9 @@ export default function AccountPage() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { label: "ชื่อ-นามสกุล *", value: editFn, set: setEditFn, ph: "ชื่อ นามสกุล" },
-                    { label: "รหัสพนักงาน",     value: editEid, set: setEditEid, ph: "เช่น 67000001" },
-                    { label: "Username *",       value: editUn,  set: setEditUn,  ph: "username" },
+                    { label: "ชื่อ-นามสกุล *", value: editFn,  set: setEditFn,  ph: "ชื่อ นามสกุล"   },
+                    { label: "รหัสพนักงาน",     value: editEid, set: setEditEid, ph: "เช่น 67000001"  },
+                    { label: "Username *",       value: editUn,  set: setEditUn,  ph: "username"       },
                   ].map(f => (
                     <div key={f.label}>
                       <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{f.label}</p>
@@ -385,7 +349,6 @@ export default function AccountPage() {
               </div>
             )}
 
-            {/* Users table */}
             <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
               <table className="w-full text-sm">
                 <thead>
@@ -415,9 +378,9 @@ export default function AccountPage() {
                                             u.role === "supervisor" ? "rgba(255,165,2,0.15)"  :
                                             u.role === "manager"    ? "rgba(59,130,246,0.15)" :
                                             "rgba(100,116,139,0.15)",
-                                color:      u.role === "admin"      ? "var(--color-anu-glow)"    :
-                                            u.role === "supervisor" ? "var(--color-anu-warning)"  :
-                                            u.role === "manager"    ? "#3b82f6"                   :
+                                color:      u.role === "admin"      ? "var(--color-anu-glow)"   :
+                                            u.role === "supervisor" ? "var(--color-anu-warning)" :
+                                            u.role === "manager"    ? "#3b82f6"                  :
                                             "var(--color-anu-muted)",
                               }}>
                           {u.role}

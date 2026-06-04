@@ -12,7 +12,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // First login modal
   const [showChangePw, setShowChangePw] = useState(false);
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [newPw, setNewPw] = useState("");
@@ -25,7 +24,7 @@ export default function LoginPage() {
     setError("");
 
     const { data, error: err } = await supabase
-      .from("users")
+      .from("app_users")
       .select("*")
       .eq("username", username.trim())
       .single();
@@ -44,7 +43,6 @@ export default function LoginPage() {
 
     setLoading(false);
 
-    // first_login → บังคับเปลี่ยน password
     if (data.first_login) {
       setPendingUser(data);
       setShowChangePw(true);
@@ -68,10 +66,10 @@ export default function LoginPage() {
     }
 
     setPwSaving(true);
-    const { error } = await supabase.from("users").update({
-      password_hash: newPw,
-      first_login:   false,
-    }).eq("id", pendingUser.id);
+    const { error } = await supabase
+      .from("app_users")
+      .update({ password_hash: newPw, first_login: false })
+      .eq("id", pendingUser.id);
 
     if (error) {
       setPwError(`บันทึกไม่สำเร็จ: ${error.message}`);
@@ -94,7 +92,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
 
-      {/* ── First-login modal ── */}
+      {/* First-login modal */}
       {showChangePw && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
              style={{ background: "rgba(0,0,0,0.7)" }}>
@@ -107,7 +105,9 @@ export default function LoginPage() {
                 ต้องเปลี่ยน Password ก่อนใช้งาน
               </h2>
               <p className="text-xs mt-1" style={{ color: "var(--color-anu-muted)" }}>
-                บัญชี <span style={{ color: "var(--color-anu-glow)" }}>{pendingUser?.username}</span> ยังใช้ password เริ่มต้นอยู่
+                บัญชี{" "}
+                <span style={{ color: "var(--color-anu-glow)" }}>{pendingUser?.username}</span>{" "}
+                ยังใช้ password เริ่มต้นอยู่
               </p>
             </div>
 
@@ -163,7 +163,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* ── Login card ── */}
+      {/* Login card */}
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-3 mb-8">
           <Logo className="w-14 h-14" />
