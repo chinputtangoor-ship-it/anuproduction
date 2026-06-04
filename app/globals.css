@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-anu-void:     #050508;
+  --color-anu-surface:  #0f1117;
+  --color-anu-elevated: #171921;
+  --color-anu-border:   #1e2230;
+  --color-anu-text:     #e2e8f0;
+  --color-anu-muted:    #64748b;
+  --color-anu-accent:   #7c5cff;
+  --color-anu-glow:     #a78bfa;
+  --color-anu-success:  #00d4aa;
+  --color-anu-warning:  #ffa502;
+  --color-anu-danger:   #ff4757;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-anu-void);
+  color: var(--color-anu-text);
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,92,255,0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(167,139,250,0.08), transparent),
+    linear-gradient(180deg, #050508 0%, #0a0a10 100%);
+}

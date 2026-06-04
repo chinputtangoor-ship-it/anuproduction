@@ -1,0 +1,1 @@
+export { Logo, Logo as QuantumCoreLogo } from "./Logo";

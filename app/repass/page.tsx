@@ -1,0 +1,570 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"];
+const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
+const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
+
+export default function RepassPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [step, setStep] = useState<"line" | "batch" | "box" | "record" | "view">("line");
+
+  const [activeLines, setActiveLines] = useState<string[]>([]);
+  const [activeBatches, setActiveBatches] = useState<string[]>([]);
+  const [nonAfBoxes, setNonAfBoxes] = useState<any[]>([]);
+
+  const [selLine, setSelLine] = useState("");
+  const [selBatch, setSelBatch] = useState("");
+  const [selBox, setSelBox] = useState<any>(null);
+  const [isOther, setIsOther] = useState(false);
+
+  const [otherLine, setOtherLine] = useState(LINES[0]);
+  const [otherBatch, setOtherBatch] = useState("");
+  const [otherBoxNum, setOtherBoxNum] = useState("");
+
+  const [mode, setMode] = useState<"Online" | "Offline">("Online");
+  const [resultStatus, setResultStatus] = useState("AF");
+  const [newDefects, setNewDefects] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
+
+  const now = new Date();
+  const roundedMin = Math.floor(now.getMinutes() / 15) * 15;
+  const defaultTime = `${String(now.getHours()).padStart(2, "0")}:${String(roundedMin).padStart(2, "0")}`;
+
+  const [startDate, setStartDate] = useState(now.toISOString().slice(0, 10));
+  const [startTime, setStartTime] = useState(defaultTime);
+  const [endDate, setEndDate] = useState(now.toISOString().slice(0, 10));
+  const [endTime, setEndTime] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [viewData, setViewData] = useState<any[]>([]);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewPeriod, setViewPeriod] = useState("ทั้งหมด");
+
+  const needDefect = !["AF", "HP", "HUP"].includes(resultStatus);
+  const timeOptions = Array.from({ length: 96 }, (_, i) => {
+    const h = Math.floor(i / 4);
+    const m = (i % 4) * 15;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  });
+
+  const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
+  const STATUS_COLORS: Record<string, string> = {
+    AF: "var(--color-anu-success)", Sort: "var(--color-anu-warning)",
+    PS: "#f97316", HP: "#3b82f6", HUP: "#6366f1",
+    HFX: "#a855f7", Scrap: "var(--color-anu-danger)"
+  };
+
+  useEffect(() => {
+    const stored = localStorage.getItem("anu_user");
+    if (!stored) { router.push("/login"); return; }
+    setUser(JSON.parse(stored));
+    loadActiveLines();
+  }, []);
+
+  async function loadActiveLines() {
+    const { data } = await supabase.from("boxes").select("line").neq("status", "AF");
+    const unique = [...new Set((data || []).map((d: any) => d.line))].sort();
+    setActiveLines(unique);
+  }
+
+  async function loadActiveBatches(line: string) {
+    const { data } = await supabase.from("boxes").select("batch").eq("line", line).neq("status", "AF");
+    const unique = [...new Set((data || []).map((d: any) => d.batch))];
+    setActiveBatches(unique);
+  }
+
+  async function loadNonAfBoxes(batch: string) {
+    const { data } = await supabase.from("boxes").select("*").eq("batch", batch).neq("status", "AF").order("box_number");
+    setNonAfBoxes(data || []);
+  }
+
+  async function loadViewData() {
+    setViewLoading(true);
+    const { data: repassData } = await supabase
+      .from("repass")
+      .select("*")
+      .order("time_stamp", { ascending: false })
+      .limit(200);
+
+    if (!repassData || repassData.length === 0) {
+      setViewData([]);
+      setViewLoading(false);
+      return;
+    }
+
+    const { data: boxData } = await supabase.from("boxes").select("batch, box_number, defects");
+    const boxMap: Record<string, string> = {};
+    (boxData || []).forEach((b: any) => {
+      boxMap[`${b.batch}__${b.box_number}`] = b.defects || "-";
+    });
+
+    const merged = repassData.map(r => ({
+      ...r,
+      original_defects: boxMap[`${r.batch}__${r.box_number}`] || "-"
+    }));
+
+    setViewData(merged);
+    setViewLoading(false);
+  }
+
+  function resetRecordForm() {
+    setResultStatus("AF");
+    setNewDefects([]);
+    setReason("");
+    setEndTime("");
+  }
+
+  async function handleSave() {
+    const line    = isOther ? otherLine   : selLine;
+    const batch   = isOther ? otherBatch  : selBatch;
+    const boxNum  = isOther ? parseInt(otherBoxNum) : selBox?.box_number;
+    const prevStatus = isOther ? "N/A" : selBox?.status;
+
+    if (!batch || !boxNum) { alert("กรุณาระบุ Batch และเลขกล่อง"); return; }
+    if (needDefect && newDefects.length === 0) { alert(`Status "${resultStatus}" ต้องระบุ Defects`); return; }
+
+    setSaving(true);
+    await supabase.from("repass").insert([{
+      time_stamp:      new Date().toISOString(),
+      line, batch,
+      box_number:      boxNum,
+      previous_status: prevStatus,
+      result_status:   resultStatus,
+      new_defects:     needDefect ? newDefects.join(",") : null,
+      type:            mode,
+      reason:          resultStatus === "AF" ? "Normal Re-pass" : reason,
+      start_time:      `${startDate}T${startTime}:00`,
+      complete_time:   endTime ? `${endDate}T${endTime}:00` : null,
+      repass_by:       user?.fullname,
+    }]);
+
+    if (!isOther) {
+      await supabase.from("boxes").update({
+        status:  resultStatus,
+        defects: needDefect ? newDefects.join(",") : selBox?.defects,
+      }).eq("batch", batch).eq("box_number", boxNum);
+    }
+
+    setSaving(false);
+    resetRecordForm();
+
+    if (isOther) {
+      setOtherBatch("");
+      setOtherBoxNum("");
+      alert("✅ บันทึกสำเร็จ");
+    } else {
+      await loadNonAfBoxes(batch);
+      setStep("box");
+      setSelBox(null);
+    }
+  }
+
+  const filteredView = viewData.filter(r => {
+    if (viewPeriod === "ทั้งหมด") return true;
+    const d = new Date(r.time_stamp);
+    const n = new Date();
+    if (viewPeriod === "วันนี้") return d.toDateString() === n.toDateString();
+    if (viewPeriod === "7 วันล่าสุด") return (n.getTime() - d.getTime()) < 7 * 86400000;
+    return true;
+  });
+
+  return (
+    <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
+      <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => {
+            if (step === "record") setStep(isOther ? "line" : "box");
+            else if (step === "box") { setStep("batch"); setSelBox(null); }
+            else if (step === "batch") { setStep("line"); setSelBatch(""); }
+            else router.push("/dashboard");
+          }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
+            ← {step === "view" || step === "line" ? "หลัก" : "ย้อนกลับ"}
+          </button>
+          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🔄 Re-pass</h1>
+          <button onClick={() => { setStep("view"); loadViewData(); }}
+            className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition"
+            style={step === "view"
+              ? { background: "var(--color-anu-accent)", color: "#fff", borderColor: "var(--color-anu-accent)" }
+              : cardStyle}>
+            📋 ดูข้อมูล
+          </button>
+        </div>
+
+        {/* Breadcrumb */}
+        {!["line", "view"].includes(step) && (
+          <div className="flex gap-2 mb-6 text-sm flex-wrap">
+            {isOther
+              ? <span style={{ color: "var(--color-anu-glow)" }}>Other (ระบุเอง)</span>
+              : <>
+                  <span style={{ color: "var(--color-anu-glow)" }}>{selLine}</span>
+                  {selBatch && <><span style={{ color: "var(--color-anu-muted)" }}>›</span><span style={{ color: "var(--color-anu-glow)" }}>{selBatch}</span></>}
+                  {selBox && <><span style={{ color: "var(--color-anu-muted)" }}>›</span><span style={{ color: "var(--color-anu-text)" }}>กล่อง #{selBox.box_number}</span></>}
+                </>
+            }
+          </div>
+        )}
+
+        {/* VIEW */}
+        {step === "view" && (
+          <div>
+            <div className="flex gap-3 mb-4 flex-wrap items-center">
+              {["ทั้งหมด", "วันนี้", "7 วันล่าสุด"].map(p => (
+                <button key={p} onClick={() => { setViewPeriod(p); loadViewData(); }}
+                  className="px-4 py-2 rounded-lg text-sm border transition"
+                  style={viewPeriod === p
+                    ? { background: "var(--color-anu-accent)", color: "#fff", borderColor: "var(--color-anu-accent)" }
+                    : cardStyle}>
+                  {p}
+                </button>
+              ))}
+              <span className="ml-auto text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                {filteredView.length} รายการ
+              </span>
+            </div>
+            {viewLoading ? (
+              <p style={{ color: "var(--color-anu-muted)" }}>กำลังโหลด...</p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ background: "var(--color-anu-elevated)" }}>
+                      {["เวลา", "Line", "Batch", "กล่อง", "เดิม", "ผลลัพธ์", "Defects เดิม", "ประเภท", "หมายเหตุ", "เริ่มงาน", "จบงาน", "ผู้ทำ"].map(h => (
+                        <th key={h} className="px-3 py-3 text-left font-medium whitespace-nowrap"
+                            style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredView.map((r, i) => (
+                      <tr key={r.id} style={{ background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)", borderTop: "1px solid var(--color-anu-border)" }}>
+                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>{r.time_stamp?.slice(0, 16).replace("T", " ")}</td>
+                        <td className="px-3 py-2 font-medium" style={{ color: "var(--color-anu-text)" }}>{r.line}</td>
+                        <td className="px-3 py-2" style={{ color: "var(--color-anu-text)" }}>{r.batch}</td>
+                        <td className="px-3 py-2 text-center font-bold" style={{ color: "var(--color-anu-text)" }}>#{r.box_number}</td>
+                        <td className="px-3 py-2">
+                          <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
+                            {r.previous_status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="px-2 py-0.5 rounded-full" style={{
+                            background: r.result_status === "AF" ? "rgba(0,212,170,0.15)" : "rgba(255,165,2,0.15)",
+                            color: r.result_status === "AF" ? "var(--color-anu-success)" : "var(--color-anu-warning)",
+                          }}>
+                            {r.result_status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2" style={{ color: "var(--color-anu-muted)" }}>{r.original_defects || "-"}</td>
+                        <td className="px-3 py-2" style={{ color: "var(--color-anu-muted)" }}>{r.type}</td>
+                        <td className="px-3 py-2" style={{ color: "var(--color-anu-muted)" }}>{r.reason || "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>{r.start_time?.slice(0, 16).replace("T", " ")}</td>
+                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>{r.complete_time?.slice(0, 16).replace("T", " ") || "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>{r.repass_by || "-"}</td>
+                      </tr>
+                    ))}
+                    {filteredView.length === 0 && (
+                      <tr><td colSpan={12} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>ไม่มีข้อมูล</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 1: Line */}
+        {step === "line" && (
+          <div>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              เลือก Line ที่มีกล่องค้าง
+              {activeLines.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
+                      style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
+                  {activeLines.length} Line
+                </span>
+              )}
+            </p>
+            {activeLines.length === 0
+              ? <p className="mb-4" style={{ color: "var(--color-anu-success)" }}>✅ ไม่มีงานค้างในระบบ</p>
+              : <div className="grid grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+                  {activeLines.map(l => (
+                    <button key={l} onClick={() => {
+                      setSelLine(l); setIsOther(false);
+                      loadActiveBatches(l);
+                      setStep("batch");
+                    }}
+                      className="py-4 rounded-xl border text-sm font-semibold transition hover:scale-105"
+                      style={{ ...cardStyle, borderColor: "rgba(255,71,87,0.4)" }}>
+                      <p style={{ color: "var(--color-anu-text)" }}>{l}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--color-anu-danger)" }}>มีงานค้าง</p>
+                    </button>
+                  ))}
+                </div>
+            }
+            <button onClick={() => {
+              setIsOther(true);
+              setOtherBatch("");
+              setOtherBoxNum("");
+              setStep("record");
+              resetRecordForm();
+            }}
+              className="px-5 py-3 rounded-xl border text-sm font-medium transition hover:scale-105"
+              style={{ ...cardStyle, borderColor: "var(--color-anu-glow)" }}>
+              <span style={{ color: "var(--color-anu-glow)" }}>➕ Other — ระบุเอง</span>
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2: Batch */}
+        {step === "batch" && (
+          <div>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Batch ที่มีกล่องค้าง</p>
+            {activeBatches.length === 0
+              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบกล่องค้างใน {selLine}</p>
+              : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {activeBatches.map(b => (
+                    <button key={b} onClick={() => { setSelBatch(b); loadNonAfBoxes(b); setStep("box"); }}
+                      className="py-4 px-4 rounded-xl border text-sm font-semibold transition hover:scale-105"
+                      style={cardStyle}>
+                      <span style={{ color: "var(--color-anu-text)" }}>{b}</span>
+                    </button>
+                  ))}
+                </div>
+            }
+          </div>
+        )}
+
+        {/* STEP 3: เลือกกล่อง */}
+        {step === "box" && (
+          <div>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              เลือกกล่องที่ต้องการ Re-pass
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
+                    style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
+                {nonAfBoxes.length} กล่อง
+              </span>
+            </p>
+            {nonAfBoxes.length === 0
+              ? <p style={{ color: "var(--color-anu-success)" }}>✅ ไม่มีกล่องค้างแล้ว!</p>
+              : <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                  {nonAfBoxes.map(b => (
+                    <button key={b.id} onClick={() => {
+                      setSelBox(b);
+                      resetRecordForm();
+                      setStep("record");
+                    }}
+                      className="rounded-xl border p-4 text-left transition hover:scale-105"
+                      style={{ ...cardStyle, borderColor: `${STATUS_COLORS[b.status] || "var(--color-anu-border)"}60` }}>
+                      <p className="text-xl font-black mb-1" style={{ color: "var(--color-anu-text)" }}>#{b.box_number}</p>
+                      <p className="text-xs font-bold" style={{ color: STATUS_COLORS[b.status] }}>{b.status}</p>
+                      {b.defects && <p className="text-xs mt-1 truncate" style={{ color: "var(--color-anu-muted)" }}>{b.defects}</p>}
+                    </button>
+                  ))}
+                </div>
+            }
+          </div>
+        )}
+
+        {/* STEP 4: บันทึก */}
+        {step === "record" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Left */}
+            <div className="flex flex-col gap-4">
+
+              {/* ข้อมูลกล่อง */}
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                  {isOther ? "ระบุข้อมูลเอง" : "ข้อมูลกล่องเดิม"}
+                </p>
+                {isOther ? (
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Line</p>
+                      <select
+                        value={otherLine}
+                        onChange={e => setOtherLine(e.target.value)}
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                        style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                      >
+                        {LINES.map(l => <option key={l}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Batch</p>
+                      <input
+                        value={otherBatch}
+                        onChange={e => setOtherBatch(e.target.value)}
+                        placeholder="เช่น H50126052"
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                        style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>เลขกล่อง</p>
+                      <input
+                        type="number"
+                        min="1"
+                        value={otherBoxNum}
+                        onChange={e => setOtherBoxNum(e.target.value)}
+                        placeholder="เช่น 5"
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                        style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <p className="text-4xl font-black" style={{ color: "var(--color-anu-accent)" }}>#{selBox?.box_number}</p>
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>สถานะเดิม</p>
+                      <span className="px-3 py-1.5 rounded-lg text-sm font-bold"
+                            style={{ background: `${STATUS_COLORS[selBox?.status]}20`, color: STATUS_COLORS[selBox?.status] }}>
+                        {selBox?.status}
+                      </span>
+                      {selBox?.defects && (
+                        <p className="text-xs mt-2" style={{ color: "var(--color-anu-muted)" }}>Defect: {selBox.defects}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* เวลา */}
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                  ประเภทและเวลา
+                </p>
+                <div className="flex gap-2 mb-4">
+                  {["Online", "Offline"].map(m => (
+                    <button key={m} onClick={() => setMode(m as any)}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium border-2 transition"
+                      style={{
+                        borderColor: mode === m ? "var(--color-anu-accent)" : "transparent",
+                        background: mode === m ? "rgba(124,92,255,0.15)" : "var(--color-anu-elevated)",
+                        color: mode === m ? "var(--color-anu-glow)" : "var(--color-anu-muted)",
+                      }}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>วันที่เริ่ม</p>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                      style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>เวลาเริ่ม</p>
+                    <select
+                      value={startTime}
+                      onChange={e => setStartTime(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                      style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                    >
+                      {timeOptions.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>วันที่จบงาน (ไม่บังคับ)</p>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                      style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>เวลาจบงาน (ไม่บังคับ)</p>
+                    <select
+                      value={endTime}
+                      onChange={e => setEndTime(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                      style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                    >
+                      <option value="">-- ไม่ระบุ --</option>
+                      {timeOptions.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right */}
+            <div className="flex flex-col gap-4">
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                  สถานะหลัง Re-pass
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {BOX_STATUS.map(s => (
+                    <button key={s} onClick={() => { setResultStatus(s); setNewDefects([]); }}
+                      className="py-2.5 rounded-lg text-sm font-bold border-2 transition"
+                      style={{
+                        borderColor: resultStatus === s ? STATUS_COLORS[s] : "transparent",
+                        background: resultStatus === s ? `${STATUS_COLORS[s]}20` : "var(--color-anu-elevated)",
+                        color: resultStatus === s ? STATUS_COLORS[s] : "var(--color-anu-muted)",
+                      }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {needDefect && (
+                <div className="rounded-xl border p-4" style={cardStyle}>
+                  <p className="text-xs mb-3" style={{ color: "var(--color-anu-danger)" }}>⚠️ ระบุ Defects</p>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {DEFECT_LIST.map(d => (
+                      <button key={d}
+                        onClick={() => setNewDefects(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])}
+                        className="px-3 py-1.5 rounded-full text-xs font-medium border transition"
+                        style={{
+                          background: newDefects.includes(d) ? "rgba(255,71,87,0.2)" : "var(--color-anu-elevated)",
+                          borderColor: newDefects.includes(d) ? "var(--color-anu-danger)" : "var(--color-anu-border)",
+                          color: newDefects.includes(d) ? "var(--color-anu-danger)" : "var(--color-anu-muted)",
+                        }}>
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
+                    rows={2}
+                    placeholder="หมายเหตุเพิ่มเติม..."
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none"
+                    style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 mt-auto">
+                <button onClick={handleSave} disabled={saving}
+                  className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
+                  {saving ? "กำลังบันทึก..." : "💾 บันทึก Re-pass"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
