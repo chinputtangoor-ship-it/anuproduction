@@ -104,6 +104,11 @@ export default function PlanPage() {
     await loadPlans();
   }
 
+  async function handleStartRunning(id: string) {
+    await supabase.from("production_plan").update({ batch_status: "Running" }).eq("id", id);
+    await loadPlans();
+  }
+
   async function handleSaveEdit() {
     if (!editingPlan) return;
     setSaving(true);
@@ -117,7 +122,6 @@ export default function PlanPage() {
     setEditingPlan(null);
   }
 
-  // เปิด edit — แปลง null/undefined → "" แต่เก็บ 0 ไว้เป็น "0"
   function openEdit(plan: any) {
     setEditingPlan({
       ...plan,
@@ -125,8 +129,8 @@ export default function PlanPage() {
       production_order:    plan.production_order     ?? "",
       fert_code:           plan.fert_code            ?? "",
       semifinish_code:     plan.semifinish_code      ?? "",
-      item_qty_million:    plan.item_qty_million     != null ? String(plan.item_qty_million)  : "",
-      need_af_box:         plan.need_af_box          != null ? String(plan.need_af_box)        : "",
+      item_qty_million:    plan.item_qty_million     != null ? String(plan.item_qty_million) : "",
+      need_af_box:         plan.need_af_box          != null ? String(plan.need_af_box)      : "",
       planned_finish_date: plan.planned_finish_date?.slice(0, 10) ?? "",
       to_be_desp_on:       plan.to_be_desp_on?.slice(0, 10)       ?? "",
       roller_des_cap:      plan.roller_des_cap       ?? "",
@@ -136,14 +140,20 @@ export default function PlanPage() {
 
   const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
   const runningPlans = plans.filter(p => p.batch_status === "Running");
+  const planingPlans = plans.filter(p => p.batch_status === "Planing");
 
-  // Edit Modal
+  // ── Edit Modal ──────────────────────────────────────────────────────
   if (editingPlan) return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
       <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => setEditingPlan(null)} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>← กลับ</button>
-          <h1 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>แก้ไข Batch: {editingPlan.batch}</h1>
+          <button onClick={() => setEditingPlan(null)}
+            className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
+            ← กลับ
+          </button>
+          <h1 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>
+            แก้ไข Batch: {editingPlan.batch}
+          </h1>
         </div>
         <div className="rounded-xl border p-6 grid grid-cols-2 md:grid-cols-4 gap-4" style={cardStyle}>
           {([
@@ -153,7 +163,7 @@ export default function PlanPage() {
             ["Prod. Order", <Input value={editingPlan.production_order} onChange={(e: any) => setEditingPlan({ ...editingPlan, production_order: e.target.value })} />],
             ["FERT Code",   <Input value={editingPlan.fert_code} onChange={(e: any) => setEditingPlan({ ...editingPlan, fert_code: e.target.value })} />],
             ["Semi Code",   <Input value={editingPlan.semifinish_code} onChange={(e: any) => setEditingPlan({ ...editingPlan, semifinish_code: e.target.value })} />],
-            ["Item Qty (K)",<Input type="number" placeholder="0" value={editingPlan.item_qty_million} onChange={(e: any) => setEditingPlan({ ...editingPlan, item_qty_million: e.target.value })} />],
+            ["Item Qty (K)", <Input type="number" placeholder="0" value={editingPlan.item_qty_million} onChange={(e: any) => setEditingPlan({ ...editingPlan, item_qty_million: e.target.value })} />],
             ["Need AF Box", <Input type="number" placeholder="0" value={editingPlan.need_af_box} onChange={(e: any) => setEditingPlan({ ...editingPlan, need_af_box: e.target.value })} />],
             ["Customer",    <Select value={editingPlan.customer_name} onChange={(e: any) => setEditingPlan({ ...editingPlan, customer_name: e.target.value })}>{CUSTOMER_NAMES.map(c => <option key={c}>{c}</option>)}</Select>],
             ["Plan Finish", <Input type="date" value={editingPlan.planned_finish_date} onChange={(e: any) => setEditingPlan({ ...editingPlan, planned_finish_date: e.target.value })} />],
@@ -169,18 +179,26 @@ export default function PlanPage() {
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
             {saving ? "กำลังบันทึก..." : "💾 บันทึก"}
           </button>
-          <button onClick={() => setEditingPlan(null)} className="px-6 py-2.5 rounded-lg text-sm border" style={cardStyle}>ยกเลิก</button>
+          <button onClick={() => setEditingPlan(null)}
+            className="px-6 py-2.5 rounded-lg text-sm border" style={cardStyle}>
+            ยกเลิก
+          </button>
         </div>
       </div>
     </div>
   );
 
+  // ── Main Page ───────────────────────────────────────────────────────
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
       <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.push("/dashboard")} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>← หลัก</button>
+          <button onClick={() => router.push("/dashboard")}
+            className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
+            ← หลัก
+          </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🗓️ Production Plan</h1>
         </div>
 
@@ -201,12 +219,16 @@ export default function PlanPage() {
         {tab === "view" && (
           <div>
             <div className="flex gap-4 mb-4">
-              <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--color-anu-muted)" }}>
-                <input type="checkbox" checked={showFinished} onChange={e => setShowFinished(e.target.checked)} />
+              <label className="flex items-center gap-2 text-sm cursor-pointer"
+                     style={{ color: "var(--color-anu-muted)" }}>
+                <input type="checkbox" checked={showFinished}
+                       onChange={e => setShowFinished(e.target.checked)} />
                 แสดง Finished
               </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--color-anu-muted)" }}>
-                <input type="checkbox" checked={showPlaning} onChange={e => setShowPlaning(e.target.checked)} />
+              <label className="flex items-center gap-2 text-sm cursor-pointer"
+                     style={{ color: "var(--color-anu-muted)" }}>
+                <input type="checkbox" checked={showPlaning}
+                       onChange={e => setShowPlaning(e.target.checked)} />
                 แสดง Planing
               </label>
             </div>
@@ -223,7 +245,7 @@ export default function PlanPage() {
                         "Item Qty (K)","Need AF Box","Customer","Country","Box Packing",
                         "Plan Finish","To be Desp.","Metal Det.","Print",
                         "Ink Cap","Roller Cap","Ink Body","Roller Body",
-                        "Status","Finish Date"
+                        "Status","Finish Date",
                       ].map(h => (
                         <th key={h} className="px-3 py-3 text-left font-medium whitespace-nowrap"
                             style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
@@ -237,7 +259,7 @@ export default function PlanPage() {
                       <tr key={p.id}
                           style={{
                             background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)",
-                            borderTop: "1px solid var(--color-anu-border)"
+                            borderTop: "1px solid var(--color-anu-border)",
                           }}>
                         {[
                           p.line, p.size, p.batch, p.sap_batch, p.production_order,
@@ -245,8 +267,8 @@ export default function PlanPage() {
                           p.fert_code, p.semifinish_code,
                           p.item_qty_million, p.need_af_box,
                           p.customer_name, p.country, p.box_packing,
-                          p.planned_finish_date?.slice(0,10),
-                          p.to_be_desp_on?.slice(0,10),
+                          p.planned_finish_date?.slice(0, 10),
+                          p.to_be_desp_on?.slice(0, 10),
                           p.metal_detector, p.print_type,
                           p.ink_cap, p.roller_des_cap, p.ink_body, p.roller_des_body,
                         ].map((val, ci) => (
@@ -258,7 +280,7 @@ export default function PlanPage() {
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <span className="px-2 py-1 rounded-full text-xs font-medium"
                             style={{
-                              background: p.batch_status === "Running"  ? "rgba(0,212,170,0.15)"  :
+                              background: p.batch_status === "Running"  ? "rgba(0,212,170,0.15)"   :
                                           p.batch_status === "Finished" ? "rgba(100,116,139,0.15)" :
                                           "rgba(124,92,255,0.15)",
                               color:      p.batch_status === "Running"  ? "var(--color-anu-success)" :
@@ -269,7 +291,7 @@ export default function PlanPage() {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>
-                          {p.batch_finish_date?.slice(0,10) ?? "-"}
+                          {p.batch_finish_date?.slice(0, 10) ?? "-"}
                         </td>
                       </tr>
                     ))}
@@ -323,33 +345,85 @@ export default function PlanPage() {
 
         {/* TAB: MANAGE */}
         {tab === "manage" && (
-          <div className="flex flex-col gap-3">
-            {runningPlans.length === 0 && <p style={{ color: "var(--color-anu-muted)" }}>ไม่มีงาน Running</p>}
-            {runningPlans.map(p => (
-              <div key={p.id} className="rounded-xl border p-4 flex items-center justify-between" style={cardStyle}>
-                <div>
-                  <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>Line: {p.line}</span>
-                  <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
-                  <span style={{ color: "var(--color-anu-text)" }}>Batch: {p.batch}</span>
-                  <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
-                  <span style={{ color: "var(--color-anu-muted)" }}>FERT: {p.fert_code}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => openEdit(p)}
-                    className="px-3 py-1.5 rounded-lg text-xs border"
-                    style={cardStyle}>
-                    📝 แก้ไข
-                  </button>
-                  <button onClick={() => handleFinish(p.id)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                    style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                    🚩 จบงาน
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col gap-4">
+
+            {/* Running */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2"
+                 style={{ color: "var(--color-anu-success)" }}>
+                🟢 Running ({runningPlans.length})
+              </p>
+              {runningPlans.length === 0
+                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>ไม่มีงาน Running</p>
+                : runningPlans.map(p => (
+                    <div key={p.id}
+                         className="rounded-xl border p-4 flex items-center justify-between mb-2"
+                         style={cardStyle}>
+                      <div>
+                        <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>Line: {p.line}</span>
+                        <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
+                        <span style={{ color: "var(--color-anu-text)" }}>Batch: {p.batch}</span>
+                        <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
+                        <span style={{ color: "var(--color-anu-muted)" }}>FERT: {p.fert_code}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(p)}
+                          className="px-3 py-1.5 rounded-lg text-xs border"
+                          style={cardStyle}>
+                          📝 แก้ไข
+                        </button>
+                        <button onClick={() => handleFinish(p.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                          style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
+                          🚩 จบงาน
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
+
+            <div style={{ borderTop: "1px solid var(--color-anu-border)" }} />
+
+            {/* Planing */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2"
+                 style={{ color: "var(--color-anu-glow)" }}>
+                🟣 Planing ({planingPlans.length})
+              </p>
+              {planingPlans.length === 0
+                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>ไม่มีงาน Planing</p>
+                : planingPlans.map(p => (
+                    <div key={p.id}
+                         className="rounded-xl border p-4 flex items-center justify-between mb-2"
+                         style={cardStyle}>
+                      <div>
+                        <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>Line: {p.line}</span>
+                        <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
+                        <span style={{ color: "var(--color-anu-text)" }}>Batch: {p.batch}</span>
+                        <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
+                        <span style={{ color: "var(--color-anu-muted)" }}>FERT: {p.fert_code}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(p)}
+                          className="px-3 py-1.5 rounded-lg text-xs border"
+                          style={cardStyle}>
+                          📝 แก้ไข
+                        </button>
+                        <button onClick={() => handleStartRunning(p.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                          style={{ background: "var(--color-anu-success)", color: "#fff" }}>
+                          ▶️ เริ่มงาน
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
+
           </div>
         )}
+
       </div>
     </div>
   );

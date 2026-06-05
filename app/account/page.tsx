@@ -201,7 +201,7 @@ export default function AccountPage() {
 
         {/* TAB: ADD */}
         {tab === "add" && (
-          <div className="rounded-xl border p-6 max-w-2xl" style={cardStyle}>
+          <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6" style={cardStyle}>
             <p className="text-sm font-semibold mb-4" style={{ color: "var(--color-anu-text)" }}>
               📝 กรอกข้อมูลผู้ใช้ใหม่
             </p>
