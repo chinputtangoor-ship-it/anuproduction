@@ -86,7 +86,7 @@ export default function PlanPage() {
   });
 
   async function handleAdd() {
-    if (!form.batch) return alert("กรุณาระบุ Batch Number");
+    if (!form.batch) return alert("Please specify the Batch Number.");
     setSaving(true);
     await supabase.from("production_plan").insert([{
       ...form,
@@ -149,10 +149,10 @@ export default function PlanPage() {
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => setEditingPlan(null)}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← กลับ
+            ← Back
           </button>
           <h1 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>
-            แก้ไข Batch: {editingPlan.batch}
+            Edit Batch: {editingPlan.batch}
           </h1>
         </div>
         <div className="rounded-xl border p-6 grid grid-cols-2 md:grid-cols-4 gap-4" style={cardStyle}>
@@ -177,11 +177,11 @@ export default function PlanPage() {
           <button onClick={handleSaveEdit} disabled={saving}
             className="px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-            {saving ? "กำลังบันทึก..." : "💾 บันทึก"}
+            {saving ? "Recording..." : "💾 Save"}
           </button>
           <button onClick={() => setEditingPlan(null)}
             className="px-6 py-2.5 rounded-lg text-sm border" style={cardStyle}>
-            ยกเลิก
+            Cancel
           </button>
         </div>
       </div>
@@ -197,7 +197,7 @@ export default function PlanPage() {
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.push("/dashboard")}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← หลัก
+            ← Home
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🗓️ Production Plan</h1>
         </div>
@@ -223,17 +223,17 @@ export default function PlanPage() {
                      style={{ color: "var(--color-anu-muted)" }}>
                 <input type="checkbox" checked={showFinished}
                        onChange={e => setShowFinished(e.target.checked)} />
-                แสดง Finished
+                Show Finished
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer"
                      style={{ color: "var(--color-anu-muted)" }}>
                 <input type="checkbox" checked={showPlaning}
                        onChange={e => setShowPlaning(e.target.checked)} />
-                แสดง Planing
+                Show Planing
               </label>
             </div>
             {loading ? (
-              <p style={{ color: "var(--color-anu-muted)" }}>กำลังโหลด...</p>
+              <p style={{ color: "var(--color-anu-muted)" }}>Loading...</p>
             ) : (
               <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
                 <table className="text-xs" style={{ minWidth: "2400px" }}>
@@ -299,7 +299,7 @@ export default function PlanPage() {
                       <tr>
                         <td colSpan={25} className="px-4 py-8 text-center"
                             style={{ color: "var(--color-anu-muted)" }}>
-                          ไม่มีข้อมูล
+                          No information
                         </td>
                       </tr>
                     )}
@@ -338,7 +338,7 @@ export default function PlanPage() {
             <button onClick={handleAdd} disabled={saving}
               className="mt-6 px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-              {saving ? "กำลังบันทึก..." : "➕ บันทึกแผนใหม่"}
+              {saving ? "Recording..." : "➕ Save"}
             </button>
           </div>
         )}
@@ -354,7 +354,7 @@ export default function PlanPage() {
                 🟢 Running ({runningPlans.length})
               </p>
               {runningPlans.length === 0
-                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>ไม่มีงาน Running</p>
+                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>No running batch</p>
                 : runningPlans.map(p => (
                     <div key={p.id}
                          className="rounded-xl border p-4 flex items-center justify-between mb-2"
@@ -370,12 +370,12 @@ export default function PlanPage() {
                         <button onClick={() => openEdit(p)}
                           className="px-3 py-1.5 rounded-lg text-xs border"
                           style={cardStyle}>
-                          📝 แก้ไข
+                          📝 Edit
                         </button>
                         <button onClick={() => handleFinish(p.id)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium"
                           style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                          🚩 จบงาน
+                          🚩 Batch complete
                         </button>
                       </div>
                     </div>
@@ -392,7 +392,7 @@ export default function PlanPage() {
                 🟣 Planing ({planingPlans.length})
               </p>
               {planingPlans.length === 0
-                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>ไม่มีงาน Planing</p>
+                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>No planing batch</p>
                 : planingPlans.map(p => (
                     <div key={p.id}
                          className="rounded-xl border p-4 flex items-center justify-between mb-2"
@@ -408,12 +408,12 @@ export default function PlanPage() {
                         <button onClick={() => openEdit(p)}
                           className="px-3 py-1.5 rounded-lg text-xs border"
                           style={cardStyle}>
-                          📝 แก้ไข
+                          📝 Edit
                         </button>
                         <button onClick={() => handleStartRunning(p.id)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium"
                           style={{ background: "var(--color-anu-success)", color: "#fff" }}>
-                          ▶️ เริ่มงาน
+                          ▶️ Start batch
                         </button>
                       </div>
                     </div>

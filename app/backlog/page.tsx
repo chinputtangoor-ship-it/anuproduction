@@ -93,7 +93,7 @@ export default function BacklogPage() {
       cam_box:   finalCam,
       record_by: user?.fullname,
     }]);
-    setLastSaved(`✅ บันทึกสำเร็จ — ATS: ${finalAts} | Print: ${finalPrint} | Cam: ${finalCam} box`);
+    setLastSaved(`✅ Recording successful. — ATS: ${finalAts} | Print: ${finalPrint} | Cam: ${finalCam} box`);
     setCurAts(finalAts); setCurPrint(finalPrint); setCurCam(finalCam);
     setAddAts(""); setClearAts("");
     setAddPrint(""); setClearPrint("");
@@ -119,7 +119,7 @@ export default function BacklogPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "หลัก" : step === "batch" ? "เปลี่ยน Line" : "เปลี่ยน Batch"}
+            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>⏳ Backlog</h1>
         </div>
@@ -135,7 +135,7 @@ export default function BacklogPage() {
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
             <div className="grid grid-cols-4 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => selectLine(l)}
@@ -151,9 +151,9 @@ export default function BacklogPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Batch</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบ Batch ที่กำลัง Running ใน {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
               : <div className="grid grid-cols-2 gap-3">
                   {batches.map(b => (
                     <button key={b.batch} onClick={() => selectBatch(b.batch)}
@@ -175,7 +175,7 @@ export default function BacklogPage() {
             <div className="rounded-xl border p-4" style={cardStyle}>
               <p className="text-xs mb-3 font-medium uppercase tracking-wider"
                  style={{ color: "var(--color-anu-muted)" }}>
-                ยอดค้างปัจจุบัน
+                Current backlog
               </p>
               <div className="grid grid-cols-3 gap-3">
                 {STATIONS.map(s => (
@@ -204,12 +204,12 @@ export default function BacklogPage() {
                           background: s.final < 0 ? "rgba(255,71,87,0.15)" : "rgba(0,212,170,0.1)",
                           color: s.final < 0 ? "var(--color-anu-danger)" : "var(--color-anu-success)",
                         }}>
-                    ผลลัพธ์: {s.final} box
+                    Result: {s.final} box
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>📥 พบค้างเพิ่ม</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>📥 New backlog</p>
                     <input
                       type="number"
                       min="0"
@@ -221,7 +221,7 @@ export default function BacklogPage() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>📤 เคลียร์สำเร็จ</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>📤 Cleared success</p>
                     <input
                       type="number"
                       min="0"
@@ -239,10 +239,10 @@ export default function BacklogPage() {
             {/* Total */}
             <div className="rounded-xl border p-4 flex justify-between items-center"
                  style={{ ...cardStyle, borderColor: hasError ? "rgba(255,71,87,0.4)" : "var(--color-anu-border)" }}>
-              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>รวม Backlog</span>
+              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>Total Backlog</span>
               <span className="text-2xl font-black"
                     style={{ color: hasError ? "var(--color-anu-danger)" : "var(--color-anu-text)" }}>
-                {hasError ? "❌ ค่าติดลบ" : `${finalAts + finalPrint + finalCam} box`}
+                {hasError ? "❌ Negative value" : `${finalAts + finalPrint + finalCam} box`}
               </span>
             </div>
 
@@ -255,7 +255,7 @@ export default function BacklogPage() {
               <button onClick={handleSave} disabled={saving || hasError}
                 className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                 style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                {saving ? "กำลังบันทึก..." : "💾 บันทึก"}
+                {saving ? "Recording..." : "💾 Save"}
               </button>
             </div>
 

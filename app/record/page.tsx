@@ -54,19 +54,19 @@ export default function RecordPage() {
 
   async function handleSave() {
     if (needDefect && defects.length === 0) {
-      alert(`Status "${status}" ต้องระบุ Defects อย่างน้อย 1 รายการ`);
+      alert(`Status "${status}" Please select at least one defect.`);
       return;
     }
     if (!netWeight || parseFloat(netWeight) <= 0) {
-      alert("กรุณากรอก Net Weight ก่อนบันทึก");
+      alert("Please enter the Net Weight before saving.");
       return;
     }
     if (!totalWeight || parseFloat(totalWeight) <= 0) {
-      alert("กรุณากรอก Total Weight ก่อนบันทึก");
+      alert("Please enter the Total Weight before saving.");
       return;
     }
     if (!checkBy.trim()) {
-      alert("กรุณากรอกชื่อผู้ตรวจก่อนบันทึก");
+      alert("Please enter the inspector's name before saving.");
       return;
     }
     setSaving(true);
@@ -82,7 +82,7 @@ export default function RecordPage() {
       weight_by:       user?.fullname,
       check_by:        checkBy.trim(),
     }]);
-    setLastSaved(`✅ บันทึกกล่อง ${nextBox} (${status}) สำเร็จ`);
+    setLastSaved(`✅ Save box ${nextBox} (${status}) Success`);
     setNextBox(n => n + 1);
     setStatus("AF");
     setDefects([]);
@@ -102,13 +102,13 @@ export default function RecordPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "หลัก" : step === "batch" ? "เปลี่ยน Line" : "เปลี่ยน Batch"}
+            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>📦 Box Status</h1>
           <button onClick={() => router.push("/boxes")}
             className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition hover:opacity-80"
             style={cardStyle}>
-            📋 ดูข้อมูล
+            📋 View information
           </button>
         </div>
 
@@ -124,7 +124,7 @@ export default function RecordPage() {
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
             <div className="grid grid-cols-4 lg:grid-cols-6 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => { setSelLine(l); loadBatches(l); setStep("batch"); }}
@@ -140,9 +140,9 @@ export default function RecordPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Batch ที่กำลังผลิต</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบ Batch ที่กำลัง Running ใน {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
               : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {batches.map(b => (
                     <button key={b.batch}
@@ -173,13 +173,13 @@ export default function RecordPage() {
 
             {/* Box number */}
             <div className="rounded-xl border p-4 text-center" style={cardStyle}>
-              <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>กล่องถัดไป</p>
+              <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Current box</p>
               <p className="text-5xl font-black" style={{ color: "var(--color-anu-accent)" }}>#{nextBox}</p>
             </div>
 
             {/* Status */}
             <div className="rounded-xl border p-4" style={cardStyle}>
-              <p className="text-xs mb-3" style={{ color: "var(--color-anu-muted)" }}>เลือกสถานะ</p>
+              <p className="text-xs mb-3" style={{ color: "var(--color-anu-muted)" }}>Box status</p>
               <div className="grid grid-cols-4 gap-2">
                 {BOX_STATUS.map(s => (
                   <button key={s} onClick={() => { setStatus(s); setDefects([]); }}
@@ -199,7 +199,7 @@ export default function RecordPage() {
             {needDefect && (
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3" style={{ color: "var(--color-anu-danger)" }}>
-                  ⚠️ ต้องระบุ Defects (เลือกได้หลายอย่าง)
+                  ⚠️ Defects must be specified (multiple selections allowed).
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {DEFECT_LIST.map(d => (
@@ -224,7 +224,7 @@ export default function RecordPage() {
             <div className="rounded-xl border p-4" style={cardStyle}>
               <p className="text-xs mb-3 uppercase tracking-wider font-medium"
                  style={{ color: "var(--color-anu-muted)" }}>
-                น้ำหนักและผู้ตรวจ
+                Weight and inspector.
               </p>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -235,7 +235,7 @@ export default function RecordPage() {
                     min="0"
                     value={netWeight}
                     onChange={e => setNetWeight(e.target.value)}
-                    placeholder="กรอกน้ำหนักสุทธิ"
+                    placeholder=""
                     className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none text-right"
                     style={{
                       background:  "var(--color-anu-elevated)",
@@ -252,7 +252,7 @@ export default function RecordPage() {
                     min="0"
                     value={totalWeight}
                     onChange={e => setTotalWeight(e.target.value)}
-                    placeholder="กรอกน้ำหนักรวม"
+                    placeholder=""
                     className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none text-right"
                     style={{
                       background:  "var(--color-anu-elevated)",
@@ -264,7 +264,7 @@ export default function RecordPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ชั่งโดย (อัตโนมัติ)</p>
+                  <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Weighing by (automatic)</p>
                   <div className="rounded-lg border px-3 py-2.5 text-sm"
                        style={{
                          background:  "var(--color-anu-void)",
@@ -275,12 +275,12 @@ export default function RecordPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ตรวจโดย</p>
+                  <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Checking by</p>
                   <input
                     type="text"
                     value={checkBy}
                     onChange={e => setCheckBy(e.target.value)}
-                    placeholder="ชื่อผู้ตรวจ"
+                    placeholder=""
                     className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
                     style={{
                       background:  "var(--color-anu-elevated)",
@@ -303,7 +303,7 @@ export default function RecordPage() {
             <button onClick={handleSave} disabled={saving}
               className="py-4 rounded-xl text-base font-bold transition hover:opacity-90 disabled:opacity-50"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-              {saving ? "กำลังบันทึก..." : `💾 บันทึกกล่อง #${nextBox}`}
+              {saving ? "Recording..." : `💾 Save #${nextBox}`}
             </button>
 
           </div>

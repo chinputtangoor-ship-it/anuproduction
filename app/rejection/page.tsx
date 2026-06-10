@@ -63,7 +63,7 @@ export default function RejectionPage() {
       cam_kg:     camVal,
       check_by:   user?.fullname,
     }]);
-    setLastSaved(`✅ บันทึกสำเร็จ — ATS: ${atsVal} kg | Print: ${printVal} kg | Cam: ${camVal} kg`);
+    setLastSaved(`✅ Recording success — ATS: ${atsVal} kg | Print: ${printVal} kg | Cam: ${camVal} kg`);
     setAtsKg("");
     setPrintKg("");
     setCamKg("");
@@ -84,7 +84,7 @@ export default function RejectionPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "หลัก" : step === "batch" ? "เปลี่ยน Line" : "เปลี่ยน Batch"}
+            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🗑️ Rejection Weight</h1>
         </div>
@@ -100,7 +100,7 @@ export default function RejectionPage() {
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
             <div className="grid grid-cols-4 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => selectLine(l)}
@@ -116,9 +116,9 @@ export default function RejectionPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Batch</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบ Batch ที่กำลัง Running ใน {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
               : <div className="grid grid-cols-2 gap-3">
                   {batches.map(b => (
                     <button key={b.batch} onClick={() => selectBatch(b.batch)}
@@ -170,7 +170,7 @@ export default function RejectionPage() {
             {/* Total */}
             <div className="rounded-xl border p-4 flex justify-between items-center"
                  style={{ ...cardStyle, borderColor: total > 0 ? "rgba(255,71,87,0.4)" : "var(--color-anu-border)" }}>
-              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>รวมทั้งหมด</span>
+              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>Total</span>
               <span className="text-2xl font-black"
                     style={{ color: total > 0 ? "var(--color-anu-danger)" : "var(--color-anu-muted)" }}>
                 {total.toFixed(3)} kg
@@ -189,7 +189,7 @@ export default function RejectionPage() {
               <button onClick={handleSave} disabled={saving}
                 className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                 style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                {saving ? "กำลังบันทึก..." : "💾 บันทึก"}
+                {saving ? "Recording..." : "💾 Save"}
               </button>
             </div>
 

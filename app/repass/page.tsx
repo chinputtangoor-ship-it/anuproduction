@@ -43,7 +43,7 @@ export default function RepassPage() {
   const [saving, setSaving] = useState(false);
   const [viewData, setViewData] = useState<any[]>([]);
   const [viewLoading, setViewLoading] = useState(false);
-  const [viewPeriod, setViewPeriod] = useState("ทั้งหมด");
+  const [viewPeriod, setViewPeriod] = useState("All");
 
   const needDefect = !["AF", "HP", "HUP"].includes(resultStatus);
   const timeOptions = Array.from({ length: 96 }, (_, i) => {
@@ -125,8 +125,8 @@ export default function RepassPage() {
     const boxNum  = isOther ? parseInt(otherBoxNum) : selBox?.box_number;
     const prevStatus = isOther ? "N/A" : selBox?.status;
 
-    if (!batch || !boxNum) { alert("กรุณาระบุ Batch และเลขกล่อง"); return; }
-    if (needDefect && newDefects.length === 0) { alert(`Status "${resultStatus}" ต้องระบุ Defects`); return; }
+    if (!batch || !boxNum) { alert("Please specify the batch number and box number."); return; }
+    if (needDefect && newDefects.length === 0) { alert(`Status "${resultStatus}" Please specify the defects.`); return; }
 
     setSaving(true);
     await supabase.from("repass").insert([{
@@ -156,7 +156,7 @@ export default function RepassPage() {
     if (isOther) {
       setOtherBatch("");
       setOtherBoxNum("");
-      alert("✅ บันทึกสำเร็จ");
+      alert("✅ Success");
     } else {
       await loadNonAfBoxes(batch);
       setStep("box");
@@ -165,11 +165,11 @@ export default function RepassPage() {
   }
 
   const filteredView = viewData.filter(r => {
-    if (viewPeriod === "ทั้งหมด") return true;
+    if (viewPeriod === "All") return true;
     const d = new Date(r.time_stamp);
     const n = new Date();
-    if (viewPeriod === "วันนี้") return d.toDateString() === n.toDateString();
-    if (viewPeriod === "7 วันล่าสุด") return (n.getTime() - d.getTime()) < 7 * 86400000;
+    if (viewPeriod === "Today") return d.toDateString() === n.toDateString();
+    if (viewPeriod === "Last 7 days") return (n.getTime() - d.getTime()) < 7 * 86400000;
     return true;
   });
 
@@ -185,7 +185,7 @@ export default function RepassPage() {
             else if (step === "batch") { setStep("line"); setSelBatch(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "view" || step === "line" ? "หลัก" : "ย้อนกลับ"}
+            ← {step === "view" || step === "line" ? "Home" : "Back"}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🔄 Re-pass</h1>
           <button onClick={() => { setStep("view"); loadViewData(); }}
@@ -193,7 +193,7 @@ export default function RepassPage() {
             style={step === "view"
               ? { background: "var(--color-anu-accent)", color: "#fff", borderColor: "var(--color-anu-accent)" }
               : cardStyle}>
-            📋 ดูข้อมูล
+            📋 View information
           </button>
         </div>
 
@@ -201,7 +201,7 @@ export default function RepassPage() {
         {!["line", "view"].includes(step) && (
           <div className="flex gap-2 mb-6 text-sm flex-wrap">
             {isOther
-              ? <span style={{ color: "var(--color-anu-glow)" }}>Other (ระบุเอง)</span>
+              ? <span style={{ color: "var(--color-anu-glow)" }}>Other (Specify yourself)</span>
               : <>
                   <span style={{ color: "var(--color-anu-glow)" }}>{selLine}</span>
                   {selBatch && <><span style={{ color: "var(--color-anu-muted)" }}>›</span><span style={{ color: "var(--color-anu-glow)" }}>{selBatch}</span></>}
@@ -215,7 +215,7 @@ export default function RepassPage() {
         {step === "view" && (
           <div>
             <div className="flex gap-3 mb-4 flex-wrap items-center">
-              {["ทั้งหมด", "วันนี้", "7 วันล่าสุด"].map(p => (
+              {["All", "Today", "Last 7 days"].map(p => (
                 <button key={p} onClick={() => { setViewPeriod(p); loadViewData(); }}
                   className="px-4 py-2 rounded-lg text-sm border transition"
                   style={viewPeriod === p
@@ -225,17 +225,17 @@ export default function RepassPage() {
                 </button>
               ))}
               <span className="ml-auto text-xs" style={{ color: "var(--color-anu-muted)" }}>
-                {filteredView.length} รายการ
+                {filteredView.length} List
               </span>
             </div>
             {viewLoading ? (
-              <p style={{ color: "var(--color-anu-muted)" }}>กำลังโหลด...</p>
+              <p style={{ color: "var(--color-anu-muted)" }}>Loading...</p>
             ) : (
               <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
                 <table className="w-full text-xs">
                   <thead>
                     <tr style={{ background: "var(--color-anu-elevated)" }}>
-                      {["เวลา", "Line", "Batch", "กล่อง", "เดิม", "ผลลัพธ์", "Defects เดิม", "ประเภท", "หมายเหตุ", "เริ่มงาน", "จบงาน", "ผู้ทำ"].map(h => (
+                      {["Time", "Line", "Batch", "Box no.", "Previous status", "Result", "Defects", "Type", "Reason", "Start", "Complete", "Done by"].map(h => (
                         <th key={h} className="px-3 py-3 text-left font-medium whitespace-nowrap"
                             style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
                           {h}
@@ -272,7 +272,7 @@ export default function RepassPage() {
                       </tr>
                     ))}
                     {filteredView.length === 0 && (
-                      <tr><td colSpan={12} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>ไม่มีข้อมูล</td></tr>
+                      <tr><td colSpan={12} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>No information</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -285,7 +285,7 @@ export default function RepassPage() {
         {step === "line" && (
           <div>
             <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
-              เลือก Line ที่มีกล่องค้าง
+              Select the Line
               {activeLines.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
                       style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
@@ -294,7 +294,7 @@ export default function RepassPage() {
               )}
             </p>
             {activeLines.length === 0
-              ? <p className="mb-4" style={{ color: "var(--color-anu-success)" }}>✅ ไม่มีงานค้างในระบบ</p>
+              ? <p className="mb-4" style={{ color: "var(--color-anu-success)" }}>✅ No pending tasks in the system.</p>
               : <div className="grid grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
                   {activeLines.map(l => (
                     <button key={l} onClick={() => {
@@ -305,7 +305,7 @@ export default function RepassPage() {
                       className="py-4 rounded-xl border text-sm font-semibold transition hover:scale-105"
                       style={{ ...cardStyle, borderColor: "rgba(255,71,87,0.4)" }}>
                       <p style={{ color: "var(--color-anu-text)" }}>{l}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--color-anu-danger)" }}>มีงานค้าง</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--color-anu-danger)" }}>Pending</p>
                     </button>
                   ))}
                 </div>
@@ -319,7 +319,7 @@ export default function RepassPage() {
             }}
               className="px-5 py-3 rounded-xl border text-sm font-medium transition hover:scale-105"
               style={{ ...cardStyle, borderColor: "var(--color-anu-glow)" }}>
-              <span style={{ color: "var(--color-anu-glow)" }}>➕ Other — ระบุเอง</span>
+              <span style={{ color: "var(--color-anu-glow)" }}>➕ Other — Specify yourself</span>
             </button>
           </div>
         )}
@@ -327,9 +327,9 @@ export default function RepassPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Batch ที่มีกล่องค้าง</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
             {activeBatches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบกล่องค้างใน {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No pending on {selLine}</p>
               : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {activeBatches.map(b => (
                     <button key={b} onClick={() => { setSelBatch(b); loadNonAfBoxes(b); setStep("box"); }}
@@ -347,14 +347,14 @@ export default function RepassPage() {
         {step === "box" && (
           <div>
             <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
-              เลือกกล่องที่ต้องการ Re-pass
+              Select the box you want to Re-pass
               <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
                     style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
-                {nonAfBoxes.length} กล่อง
+                {nonAfBoxes.length} Box
               </span>
             </p>
             {nonAfBoxes.length === 0
-              ? <p style={{ color: "var(--color-anu-success)" }}>✅ ไม่มีกล่องค้างแล้ว!</p>
+              ? <p style={{ color: "var(--color-anu-success)" }}>✅ No pending boxes!</p>
               : <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                   {nonAfBoxes.map(b => (
                     <button key={b.id} onClick={() => {
@@ -384,7 +384,7 @@ export default function RepassPage() {
               {/* ข้อมูลกล่อง */}
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                  {isOther ? "ระบุข้อมูลเอง" : "ข้อมูลกล่องเดิม"}
+                  {isOther ? "Specify yourself" : "Previous information"}
                 </p>
                 {isOther ? (
                   <div className="flex flex-col gap-3">
@@ -404,19 +404,19 @@ export default function RepassPage() {
                       <input
                         value={otherBatch}
                         onChange={e => setOtherBatch(e.target.value)}
-                        placeholder="เช่น H50126052"
+                        placeholder=""
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                         style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                       />
                     </div>
                     <div>
-                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>เลขกล่อง</p>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Box number</p>
                       <input
                         type="number"
                         min="1"
                         value={otherBoxNum}
                         onChange={e => setOtherBoxNum(e.target.value)}
-                        placeholder="เช่น 5"
+                        placeholder=""
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                         style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                       />
@@ -426,7 +426,7 @@ export default function RepassPage() {
                   <div className="flex items-center gap-4">
                     <p className="text-4xl font-black" style={{ color: "var(--color-anu-accent)" }}>#{selBox?.box_number}</p>
                     <div>
-                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>สถานะเดิม</p>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Previous status</p>
                       <span className="px-3 py-1.5 rounded-lg text-sm font-bold"
                             style={{ background: `${STATUS_COLORS[selBox?.status]}20`, color: STATUS_COLORS[selBox?.status] }}>
                         {selBox?.status}
@@ -442,7 +442,7 @@ export default function RepassPage() {
               {/* เวลา */}
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                  ประเภทและเวลา
+                  Type and time
                 </p>
                 <div className="flex gap-2 mb-4">
                   {["Online", "Offline"].map(m => (
@@ -459,7 +459,7 @@ export default function RepassPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>วันที่เริ่ม</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Start date</p>
                     <input
                       type="date"
                       value={startDate}
@@ -469,7 +469,7 @@ export default function RepassPage() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>เวลาเริ่ม</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Start time</p>
                     <select
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
@@ -480,7 +480,7 @@ export default function RepassPage() {
                     </select>
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>วันที่จบงาน (ไม่บังคับ)</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Complete date</p>
                     <input
                       type="date"
                       value={endDate}
@@ -490,14 +490,14 @@ export default function RepassPage() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>เวลาจบงาน (ไม่บังคับ)</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Complete time</p>
                     <select
                       value={endTime}
                       onChange={e => setEndTime(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                     >
-                      <option value="">-- ไม่ระบุ --</option>
+                      <option value="">-- Not specified --</option>
                       {timeOptions.map(t => <option key={t}>{t}</option>)}
                     </select>
                   </div>
@@ -509,7 +509,7 @@ export default function RepassPage() {
             <div className="flex flex-col gap-4">
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                  สถานะหลัง Re-pass
+                  Result after Re-pass
                 </p>
                 <div className="grid grid-cols-4 gap-2">
                   {BOX_STATUS.map(s => (
@@ -547,7 +547,7 @@ export default function RepassPage() {
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     rows={2}
-                    placeholder="หมายเหตุเพิ่มเติม..."
+                    placeholder="Additional notes..."
                     className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none"
                     style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                   />
@@ -558,7 +558,7 @@ export default function RepassPage() {
                 <button onClick={handleSave} disabled={saving}
                   className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                   style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                  {saving ? "กำลังบันทึก..." : "💾 บันทึก Re-pass"}
+                  {saving ? "Recording..." : "💾 Save"}
                 </button>
               </div>
             </div>

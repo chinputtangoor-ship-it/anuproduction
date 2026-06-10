@@ -115,7 +115,7 @@ export default function CameraPage() {
               type="number"
               min="0"
               value={d.qty}
-              placeholder="จำนวน (ชิ้น)"
+              placeholder=""
               onChange={e => {
                 const n = [...defs];
                 n[i] = { ...n[i], qty: e.target.value };
@@ -141,7 +141,7 @@ export default function CameraPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "หลัก" : step === "batch" ? "เปลี่ยน Line" : "เปลี่ยน Batch"}
+            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>📷 Camera Analysis</h1>
         </div>
@@ -157,7 +157,7 @@ export default function CameraPage() {
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
             <div className="grid grid-cols-4 lg:grid-cols-6 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => { setSelLine(l); loadBatches(l); setStep("batch"); }}
@@ -173,9 +173,9 @@ export default function CameraPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>เลือก Batch ที่กำลังผลิต</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบ Batch ที่กำลัง Running ใน {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
               : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {batches.map(b => (
                     <button key={b.batch} onClick={() => { setSelBatch(b.batch); setStep("record"); }}
@@ -237,20 +237,20 @@ export default function CameraPage() {
                   </div>
 
                   <p className="text-xs mb-2 font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                    📌 ข้อมูลของเสีย (Defects)
+                    📌 Defects
                   </p>
                   <div className="grid grid-cols-2 gap-1 mb-1">
-                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>ประเภท Defect</p>
-                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>จำนวน (ชิ้น)</p>
+                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>Defect type</p>
+                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>Quantity (pieces)</p>
                   </div>
                   <DefectRows defs={cam.defs} setDefs={cam.setDefs} />
 
                   {/* Summary */}
                   <div className="mt-3 rounded-lg p-2 flex justify-between text-xs"
                        style={{ background: "var(--color-anu-elevated)" }}>
-                    <span style={{ color: "var(--color-anu-muted)" }}>รวม Defect</span>
+                    <span style={{ color: "var(--color-anu-muted)" }}>Total Defect</span>
                     <span style={{ color: cam.color, fontWeight: 700 }}>
-                      {cam.defs.filter(d => d.type !== "-").reduce((s, d) => s + (parseInt(d.qty) || 0), 0)} ชิ้น
+                      {cam.defs.filter(d => d.type !== "-").reduce((s, d) => s + (parseInt(d.qty) || 0), 0)} pieces
                     </span>
                   </div>
                 </div>
@@ -260,18 +260,18 @@ export default function CameraPage() {
             {/* Save / Cancel */}
             {saved ? (
               <p className="text-center font-semibold" style={{ color: "var(--color-anu-success)" }}>
-                🎉 บันทึกข้อมูลการวิเคราะห์จากกล้องเรียบร้อยแล้ว!
+                🎉 Successfully recorded!
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-4 max-w-lg">
                 <button onClick={() => { setStep("batch"); setSelBatch(""); }}
                   className="py-3 rounded-xl border text-sm font-medium" style={cardStyle}>
-                  ❌ ยกเลิก/ย้อนกลับ
+                  ❌ Cancel
                 </button>
                 <button onClick={handleSave} disabled={saving}
                   className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                   style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                  {saving ? "กำลังบันทึก..." : "💾 บันทึกข้อมูล"}
+                  {saving ? "Recording..." : "💾 Save"}
                 </button>
               </div>
             )}

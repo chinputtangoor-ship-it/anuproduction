@@ -66,10 +66,9 @@ function passColor(v: number | null) {
 export default function AnalyticsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
-  const [filterLine, setFilterLine] = useState("ทั้งหมด");
-  const [filterPeriod, setFilterPeriod] = useState("วันนี้");
+  const [filterLine, setFilterLine] = useState("All");
+  const [filterPeriod, setFilterPeriod] = useState("Today");
 
-  // custom time range
   const todayStr = new Date().toISOString().slice(0, 10);
   const [useCustom, setUseCustom] = useState(false);
   const [customStart, setCustomStart] = useState(todayStr);
@@ -112,7 +111,7 @@ export default function AnalyticsPage() {
 
   function applyFilter<T extends Record<string, any>>(data: T[], lineKey: string, timeKey?: string): T[] {
     let d = [...data];
-    if (filterLine !== "ทั้งหมด") d = d.filter(r => r[lineKey] === filterLine);
+    if (filterLine !== "All") d = d.filter(r => r[lineKey] === filterLine);
     if (timeKey) {
       if (useCustom) {
         const from = new Date(`${customStart}T${customStartTime}:00`);
@@ -121,20 +120,20 @@ export default function AnalyticsPage() {
           const t = new Date(r[timeKey]);
           return t >= from && t <= to;
         });
-      } else if (filterPeriod !== "ทั้งหมด") {
+      } else if (filterPeriod !== "All") {
         const now = new Date();
         const cutoff =
-          filterPeriod === "วันนี้"        ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) :
-          filterPeriod === "กะเช้า (07-19)" ? (() => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7); return d; })() :
-          filterPeriod === "กะดึก (19-07)" ? (() => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19); return d; })() :
-          filterPeriod === "7 วันล่าสุด"   ? new Date(now.getTime() - 7 * 86400000) :
+          filterPeriod === "Today"        ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) :
+          filterPeriod === "Day shift (07-19)" ? (() => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7); return d; })() :
+          filterPeriod === "Night shift (19-07)" ? (() => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19); return d; })() :
+          filterPeriod === "Last 7 days"   ? new Date(now.getTime() - 7 * 86400000) :
           new Date(now.getTime() - 30 * 86400000);
 
-        if (filterPeriod === "กะเช้า (07-19)") {
+        if (filterPeriod === "Day shift (07-19)") {
           const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7);
           const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19);
           d = d.filter(r => { const t = new Date(r[timeKey]); return t >= start && t < end; });
-        } else if (filterPeriod === "กะดึก (19-07)") {
+        } else if (filterPeriod === "Night shift (19-07)") {
           const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19);
           const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 7);
           d = d.filter(r => { const t = new Date(r[timeKey]); return t >= start && t < end; });
@@ -151,10 +150,22 @@ export default function AnalyticsPage() {
   const fCamera  = applyFilter(camera,    "line", "time_stamp");
   const fRepass  = applyFilter(repass,    "line", "time_stamp");
   const fBacklog = applyFilter(backlog,   "line");
-  const fPlans   = filterLine === "ทั้งหมด" ? plans : plans.filter(p => p.line === filterLine);
+  const fPlans   = filterLine === "All" ? plans : plans.filter(p => p.line === filterLine);
+
+  // ── จุดที่ 1: Running plans ไม่ขึ้นกับ filter เวลา ──
+  const runningPlans = plans.filter(p => p.batch_status === "Running");
+  const runningPlansFiltered = filterLine === "All"
+    ? runningPlans
+    : runningPlans.filter(p => p.line === filterLine);
+  const runningBatches = new Set(runningPlans.map(p => p.batch));
+  const boxesInRunning = boxes.filter(b =>
+    runningBatches.has(b.batch) &&
+    (filterLine === "All" || b.line === filterLine)
+  );
+
   const runPlans = fPlans.filter(p => p.batch_status !== "Finished");
 
-  const totalTarget = runPlans.reduce((s, p) => s + (p.need_af_box || 0), 0);
+  const totalTarget = runningPlansFiltered.reduce((s, p) => s + (p.need_af_box || 0), 0);
   const totalAF     = fBoxes.filter(b => b.status === "AF").length;
   const totalBoxes  = fBoxes.length;
   const totalNonAF  = totalBoxes - totalAF;
@@ -169,6 +180,7 @@ export default function AnalyticsPage() {
   ).reduce((s: number, b: any) => s + (b.total_backlog || 0), 0);
 
   const ALL_LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
+
   const lineStats = ALL_LINES.map(ln => {
     const lb  = fBoxes.filter(b => b.line === ln);
     const af  = lb.filter(b => b.status === "AF").length;
@@ -183,19 +195,31 @@ export default function AnalyticsPage() {
     return { line: ln, af, tot, scr, tgt, yld, rejKg, bl, batches };
   });
 
-  const progressData = lineStats
-    .filter(s => s.tgt > 0 && s.tot > 0)
-    .map(s => ({
-      name:   s.line,
-      pct:    parseFloat(s.yld.toFixed(1)),
-      af:     s.af,
-      target: s.tgt,
-      color:  s.yld >= 90 ? SUCCESS : s.yld >= 60 ? WARNING : DANGER,
-    }));
+  // Progress running batch
+  const progressData = ALL_LINES
+    .map(ln => {
+      const tgt     = runningPlansFiltered.filter(p => p.line === ln).reduce((s, p) => s + (p.need_af_box || 0), 0);
+      const af      = boxesInRunning.filter(b => b.line === ln && b.status === "AF").length;
+      const yld     = tgt > 0 ? af / tgt * 100 : 0;
+      const batches = runningPlansFiltered.filter(p => p.line === ln).map(p => p.batch).join(", ");
+      return { name: ln, pct: parseFloat(Math.min(yld, 110).toFixed(1)), af, target: tgt, batch: batches, color: yld >= 90 ? SUCCESS : yld >= 60 ? WARNING : DANGER };
+    })
+    .filter(s => s.target > 0);
 
-  // ── Defect Pareto (sorted desc → cumulative ขึ้น) ──
+  // ── Pareto จากกล่องที่ยังไม่ AF
+  const latestBoxMap: Record<string, any> = {};
+  boxes.forEach(b => {
+    const key = `${b.batch}__${b.box_number}`;
+    if (!latestBoxMap[key] || new Date(b.time_stamp) > new Date(latestBoxMap[key].time_stamp))
+      latestBoxMap[key] = b;
+  });
+  const pendingBoxes = Object.values(latestBoxMap)
+    .filter(b => b.status !== "AF")
+    .filter(b => filterLine === "All" || b.line === filterLine);
+
   const defectCounts: Record<string, number> = {};
-  fBoxes.filter(b => b.status !== "AF" && b.defects).forEach(b => {
+  pendingBoxes.forEach(b => {
+    if (!b.defects) return;
     b.defects.split(",").forEach((d: string) => {
       const t = d.trim();
       if (t && !["nan","none","-",""].includes(t.toLowerCase()))
@@ -210,7 +234,6 @@ export default function AnalyticsPage() {
     return { name, count, cumPct: parseFloat(cumPct.toFixed(1)) };
   });
 
-  // ── Camera Detail Table ──
   const camByLine: Record<string, {
     c1: number[]; c2: number[];
     c1rej: number; c2rej: number;
@@ -242,19 +265,7 @@ export default function AnalyticsPage() {
     return { line, cam1: avg1 != null ? parseFloat(avg1.toFixed(2)) : null, cam2: avg2 != null ? parseFloat(avg2.toFixed(2)) : null, c1rej: v.c1rej, c2rej: v.c2rej, topDefs };
   }).sort((a, b) => a.line.localeCompare(b.line));
 
-  // ── Camera Pass Rate bar data ──
   const camBarData = camTableData.map(r => ({ line: r.line, cam1: r.cam1, cam2: r.cam2 }));
-
-  // ── Pending non-AF ──
-  const latestBoxMap: Record<string, any> = {};
-  boxes.forEach(b => {
-    const key = `${b.batch}__${b.box_number}`;
-    if (!latestBoxMap[key] || new Date(b.time_stamp) > new Date(latestBoxMap[key].time_stamp))
-      latestBoxMap[key] = b;
-  });
-  const pendingBoxes = Object.values(latestBoxMap)
-    .filter(b => b.status !== "AF")
-    .filter(b => filterLine === "ทั้งหมด" || b.line === filterLine);
 
   const pendingDefCounts: Record<string, number> = {};
   pendingBoxes.forEach(b => {
@@ -277,13 +288,13 @@ export default function AnalyticsPage() {
   ).map(([line, count]) => ({ line, count }));
 
   const cardStyle = { background: SURFACE, borderColor: BORDER };
-  const lineOptions = ["ทั้งหมด", ...ALL_LINES];
-  const periodOptions = ["ทั้งหมด", "วันนี้", "กะเช้า (07-19)", "กะดึก (19-07)", "7 วันล่าสุด", "30 วันล่าสุด"];
+  const lineOptions = ["All", ...ALL_LINES];
+  const periodOptions = ["All", "Today", "Day shift (07-19)", "Night shift (19-07)", "Last 7 days", "Last 30 days"];
   const tabs = ["📊 Overview & Progress", "🔬 Quality Analysis", "📋 Detail & Pending"];
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--color-anu-void)" }}>
-      <p style={{ color: MUTED }}>กำลังโหลดข้อมูล...</p>
+      <p style={{ color: MUTED }}>Loading data...</p>
     </div>
   );
 
@@ -296,7 +307,7 @@ export default function AnalyticsPage() {
             📈 Executive Production Dashboard
           </h1>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            Monitoring 13 สายการผลิต · อัปเดตล่าสุด: {new Date().toLocaleString("th-TH")}
+            Monitoring 13 production lines · Last updated: {new Date().toLocaleString("th-TH")}
           </p>
         </div>
 
@@ -312,9 +323,8 @@ export default function AnalyticsPage() {
             </select>
           </div>
 
-          {/* Period selector */}
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: MUTED }}>📅 ช่วงเวลา</span>
+            <span className="text-xs" style={{ color: MUTED }}>📅 Period</span>
             <select
               value={useCustom ? "custom" : filterPeriod}
               onChange={e => {
@@ -324,21 +334,20 @@ export default function AnalyticsPage() {
               className="rounded-lg border px-3 py-1.5 text-sm outline-none"
               style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }}>
               {periodOptions.map(p => <option key={p}>{p}</option>)}
-              <option value="custom">🗓️ กำหนดเอง</option>
+              <option value="custom">🗓️ Custom</option>
             </select>
           </div>
 
-          {/* Custom range */}
           {useCustom && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs" style={{ color: MUTED }}>จาก</span>
+              <span className="text-xs" style={{ color: MUTED }}>From</span>
               <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
                 className="rounded-lg border px-2 py-1.5 text-xs outline-none"
                 style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
               <input type="time" value={customStartTime} onChange={e => setCustomStartTime(e.target.value)}
                 className="rounded-lg border px-2 py-1.5 text-xs outline-none"
                 style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
-              <span className="text-xs" style={{ color: MUTED }}>ถึง</span>
+              <span className="text-xs" style={{ color: MUTED }}>To</span>
               <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
                 className="rounded-lg border px-2 py-1.5 text-xs outline-none"
                 style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
@@ -349,7 +358,7 @@ export default function AnalyticsPage() {
           )}
 
           <span className="ml-auto text-xs" style={{ color: MUTED }}>
-            Box Status: {fBoxes.length.toLocaleString()} รายการ
+            Box Status: {fBoxes.length.toLocaleString()} List
           </span>
           <button onClick={loadAll}
             className="text-xs px-3 py-1.5 rounded-lg border transition hover:opacity-80"
@@ -376,20 +385,19 @@ export default function AnalyticsPage() {
           <div className="flex flex-col gap-6">
             <SectionHeader>Q1 — Executive KPIs</SectionHeader>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <KpiCard label="Yield Rate"    value={`${yieldPct.toFixed(1)}%`}       sub="AF / Target"                       color={kpiColor(yieldPct, 90, 70)} />
-              <KpiCard label="Good Boxes"    value={totalAF.toLocaleString()}         sub={`จาก ${totalTarget.toLocaleString()} เป้า`} color={SUCCESS} />
-              <KpiCard label="Scrap Rate"    value={`${scrapPct.toFixed(1)}%`}        sub={`${totalNonAF} กล่องไม่ผ่าน`}      color={kpiColor(scrapPct, 2, 5, true)} />
-              <KpiCard label="Active Lines"  value={`${activeLines}/13`}              sub="สายที่มีข้อมูล"                     color={BLUE} />
-              <KpiCard label="Backlog"       value={latestBacklog.toLocaleString()}   sub="งานค้างสะสม"                        color={kpiColor(latestBacklog, 0, 5, true)} />
-              <KpiCard label="Re-pass Total" value={fRepass.length.toLocaleString()}  sub="ชิ้นงานส่งซ่อม"                    color={WARNING} />
+              <KpiCard label="Yield Rate"    value={`${yieldPct.toFixed(1)}%`}       sub="AF / Target"                         color={kpiColor(yieldPct, 90, 70)} />
+              <KpiCard label="Good Boxes"    value={totalAF.toLocaleString()}         sub={`From ${totalTarget.toLocaleString()} Target`} color={SUCCESS} />
+              <KpiCard label="Scrap Rate"    value={`${scrapPct.toFixed(1)}%`}        sub={`${totalNonAF} Scrap box`}          color={kpiColor(scrapPct, 2, 5, true)} />
+              <KpiCard label="Active Lines"  value={`${activeLines}/13`}              sub="Line with data"                     color={BLUE} />
+              <KpiCard label="Backlog"       value={latestBacklog.toLocaleString()}   sub="Backlog"                            color={kpiColor(latestBacklog, 0, 5, true)} />
+              <KpiCard label="Re-pass Total" value={fRepass.length.toLocaleString()}  sub="Re-pass box"                        color={WARNING} />
             </div>
 
             <SectionHeader>Q2 — Line Status Matrix & Production Progress</SectionHeader>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-              {/* Line Matrix */}
               <div>
-                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>🟢 สถานะ 13 สายการผลิต</p>
+                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>🟢 Status of 13 production lines.</p>
                 <div className="grid grid-cols-3 gap-2">
                   {ALL_LINES.map(ln => {
                     const s = lineStats.find(x => x.line === ln)!;
@@ -408,7 +416,7 @@ export default function AnalyticsPage() {
                             {s.batches && <p className="text-xs truncate mt-0.5" style={{ color: MUTED }}>{s.batches.slice(0, 18)}</p>}
                           </>
                         ) : (
-                          <p className="text-xs" style={{ color: MUTED }}>ไม่มีข้อมูล</p>
+                          <p className="text-xs" style={{ color: MUTED }}>No information available.</p>
                         )}
                       </div>
                     );
@@ -416,9 +424,9 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-              {/* Progress Bar Chart */}
               <div>
-                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>📊 Production Progress % by Line</p>
+                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>📊 Production Progress % by Line</p>
+                <p className="text-xs mb-3" style={{ color: MUTED }}>Running Batch · AF Box</p>
                 {progressData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={360}>
                     <BarChart data={progressData} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
@@ -428,7 +436,7 @@ export default function AnalyticsPage() {
                       <Tooltip
                         {...TOOLTIP_STYLE}
                         formatter={(v: any, _: any, p: any) => [
-                          `${v}% (AF: ${p.payload.af} / ${p.payload.target})`, "Progress"
+                          `${v}% (AF: ${p.payload.af} / ${p.payload.target}) · ${p.payload.batch}`, "Progress"
                         ]}
                       />
                       <Bar dataKey="pct" radius={[4, 4, 0, 0]}
@@ -439,7 +447,7 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="rounded-xl border p-8 text-center" style={cardStyle}>
-                    <p style={{ color: MUTED }}>ไม่มี Batch ที่กำลัง Running</p>
+                    <p style={{ color: MUTED }}>No batches currently running.</p>
                   </div>
                 )}
               </div>
@@ -453,9 +461,11 @@ export default function AnalyticsPage() {
             <SectionHeader>Q3 — Scrap Pareto & Camera Performance</SectionHeader>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-              {/* Defect Pareto */}
               <div className="rounded-xl border p-5" style={cardStyle}>
-                <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>🔴 Scrap / Defect Pareto</p>
+                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>🔴 Scrap / Defect Pareto</p>
+                <p className="text-xs mb-4" style={{ color: MUTED }}>
+                  Non-AF boxes not cleared. · {pendingBoxes.length} Box
+                </p>
                 {paretoData.length > 0 ? (
                   <>
                     <ResponsiveContainer width="100%" height={280}>
@@ -472,12 +482,11 @@ export default function AnalyticsPage() {
                           labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
                           itemStyle={{ color: "#e2e8f0" }}
                         />
-                        <Bar yAxisId="left" dataKey="count" radius={[4, 4, 0, 0]} name="จำนวน">
+                        <Bar yAxisId="left" dataKey="count" radius={[4, 4, 0, 0]} name="Quantity">
                           {paretoData.map((_, i) => (
                             <Cell key={i} fill={i === 0 ? DANGER : i === 1 ? "#ff6b81" : i < 4 ? WARNING : BLUE} />
                           ))}
                         </Bar>
-                        {/* เส้น cumulative เริ่มจาก 0 → สะสมขึ้นตาม pareto */}
                         <Line
                           yAxisId="right"
                           type="linear"
@@ -501,14 +510,11 @@ export default function AnalyticsPage() {
                     </div>
                   </>
                 ) : (
-                  <p style={{ color: SUCCESS }}>🟢 ไม่พบ Defect</p>
+                  <p style={{ color: SUCCESS }}>🟢 No Non-AF in the system.</p>
                 )}
               </div>
 
-              {/* Camera Section */}
               <div className="flex flex-col gap-4">
-
-                {/* Camera Pass Rate Bar */}
                 <div className="rounded-xl border p-5" style={cardStyle}>
                   <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>📷 Camera Pass Rate by Line</p>
                   {camBarData.length > 0 ? (
@@ -517,21 +523,17 @@ export default function AnalyticsPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
                         <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 11 }} />
                         <YAxis tickFormatter={v => `${v}%`} tick={{ fill: MUTED, fontSize: 11 }} domain={[0, 105]} />
-                        <Tooltip
-                          {...TOOLTIP_STYLE}
-                          formatter={(v: any) => [`${v}%`]}
-                        />
+                        <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${v}%`]} />
                         <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 11 }} />
                         <Bar dataKey="cam1" name="Cam1 Pass%" fill={BLUE}    radius={[3, 3, 0, 0]} />
                         <Bar dataKey="cam2" name="Cam2 Pass%" fill={SUCCESS} radius={[3, 3, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p style={{ color: MUTED }}>ไม่มีข้อมูล Camera</p>
+                    <p style={{ color: MUTED }}>No information of Camera</p>
                   )}
                 </div>
 
-                {/* Camera Detail Table */}
                 <div className="rounded-xl border p-4" style={cardStyle}>
                   <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>📋 Camera Detail Table</p>
                   {camTableData.length > 0 ? (
@@ -567,7 +569,7 @@ export default function AnalyticsPage() {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-xs" style={{ color: MUTED }}>ไม่มีข้อมูล Camera</p>
+                    <p className="text-xs" style={{ color: MUTED }}>No information of Camera</p>
                   )}
                 </div>
               </div>
@@ -581,10 +583,8 @@ export default function AnalyticsPage() {
             <SectionHeader>📋 Detail Line-by-Line Breakdown & Pending Work</SectionHeader>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-              {/* Line Table */}
               <div className="xl:col-span-2">
-                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>📊 สรุปผลแต่ละสายการผลิต</p>
+                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>📊 Summarize production line.</p>
                 <div className="overflow-x-auto rounded-xl border" style={{ borderColor: BORDER }}>
                   <table className="w-full text-xs">
                     <thead>
@@ -622,10 +622,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-              {/* Right */}
               <div className="flex flex-col gap-4">
-
-                {/* Backlog chart */}
                 <div className="rounded-xl border p-4" style={cardStyle}>
                   <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>⏳ Backlog by Line</p>
                   {lineStats.filter(s => s.bl > 0).length > 0 ? (
@@ -649,17 +646,16 @@ export default function AnalyticsPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p className="text-center py-4 text-sm" style={{ color: SUCCESS }}>🟢 ไม่มีงานค้าง</p>
+                    <p className="text-center py-4 text-sm" style={{ color: SUCCESS }}>🟢 No pending work.</p>
                   )}
                 </div>
 
-                {/* Repass summary */}
                 <div className="rounded-xl border p-4" style={cardStyle}>
                   <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>🔄 Re-pass Summary</p>
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {[
-                      { label: "ทั้งหมด", value: rpTotal,                      color: TEXT },
-                      { label: "สำเร็จ",  value: rpSuccess,                     color: SUCCESS },
+                      { label: "All", value: rpTotal,                      color: TEXT },
+                      { label: "Success",  value: rpSuccess,                     color: SUCCESS },
                       { label: "Rate",    value: `${rpRate.toFixed(1)}%`,        color: kpiColor(rpRate, 80, 60) },
                     ].map(k => (
                       <div key={k.label} className="rounded-lg border p-2 text-center"
@@ -688,19 +684,18 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* Non-AF Pending */}
             <div>
-              <SectionHeader>⚠️ กล่องที่รอการ Re-pass / ยังไม่ผ่าน (Non-AF)</SectionHeader>
+              <SectionHeader>⚠️ Box awaiting Re-pass (Non-AF)</SectionHeader>
               {pendingBoxes.length > 0 ? (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                   <div className="xl:col-span-2 overflow-x-auto rounded-xl border" style={{ borderColor: BORDER }}>
                     <p className="px-4 py-3 text-sm" style={{ color: MUTED, borderBottom: `1px solid ${BORDER}` }}>
-                      พบ <span style={{ color: DANGER, fontWeight: 700 }}>{pendingBoxes.length}</span> กล่องรอดำเนินการ
+                      Pending <span style={{ color: DANGER, fontWeight: 700 }}>{pendingBoxes.length}</span> awaiting processing
                     </p>
                     <table className="w-full text-xs">
                       <thead>
                         <tr style={{ background: ELEVATED }}>
-                          {["Line", "Batch", "กล่อง", "Status", "Defects", "เวลา"].map(h => (
+                          {["Line", "Batch", "Box", "Status", "Defects", "Time"].map(h => (
                             <th key={h} className="px-3 py-2.5 text-left font-medium"
                                 style={{ color: "#94a3b8", borderBottom: `1px solid ${BORDER}` }}>{h}</th>
                           ))}
@@ -728,7 +723,7 @@ export default function AnalyticsPage() {
 
                   <div className="rounded-xl border p-5" style={cardStyle}>
                     <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>
-                      {pendingPieData.length > 0 ? "Defect ของ Non-AF" : "Status ของ Non-AF"}
+                      {pendingPieData.length > 0 ? "Defect of Non-AF" : "Status of Non-AF"}
                     </p>
                     <ResponsiveContainer width="100%" height={260}>
                       <PieChart>
@@ -760,7 +755,7 @@ export default function AnalyticsPage() {
                 </div>
               ) : (
                 <div className="rounded-xl border p-6 text-center" style={cardStyle}>
-                  <p style={{ color: SUCCESS }}>🟢 ทุกกล่องผ่านเกณฑ์ AF แล้ว ไม่มีงานค้าง</p>
+                  <p style={{ color: SUCCESS }}>🟢 No pending work.</p>
                 </div>
               )}
             </div>
@@ -768,7 +763,7 @@ export default function AnalyticsPage() {
         )}
 
         <p className="text-center text-xs mt-8" style={{ color: "#2a3550" }}>
-          📊 ประมวลผลล่าสุด: {new Date().toLocaleString("th-TH")} · Production Tracking System
+          📊 Latest processing: {new Date().toLocaleString("th-TH")} · Production Tracking System
         </p>
       </div>
     </div>

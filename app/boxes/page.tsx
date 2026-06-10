@@ -57,7 +57,7 @@ export default function BoxesPage() {
         }
       : b
     ));
-    setSaveMsg("✅ บันทึกน้ำหนักสำเร็จ");
+    setSaveMsg("✅ Success");
     setSaving(false);
     setTimeout(() => { setSaveMsg(""); setEditBox(null); }, 1500);
   }
@@ -74,10 +74,10 @@ export default function BoxesPage() {
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => editBox ? setEditBox(null) : router.push("/record")}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {editBox ? "กลับตาราง" : "Box Status"}
+            ← {editBox ? "Back" : "Box Status"}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            {editBox ? `แก้น้ำหนัก กล่อง #${editBox.box_number}` : "📋 ดูข้อมูลกล่อง"}
+            {editBox ? `Edit box #${editBox.box_number}` : "📋 Box infomation"}
           </h1>
         </div>
 
@@ -108,7 +108,7 @@ export default function BoxesPage() {
                   type="number"
                   step="0.001"
                   value={netWeight}
-                  placeholder="กรอกน้ำหนักสุทธิ"
+                  placeholder="Net weight"
                   onChange={e => setNetWeight(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-lg font-bold outline-none text-right"
                   style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
@@ -120,7 +120,7 @@ export default function BoxesPage() {
                   type="number"
                   step="0.001"
                   value={totalWeight}
-                  placeholder="กรอกน้ำหนักรวม"
+                  placeholder="Total weight"
                   onChange={e => setTotalWeight(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-lg font-bold outline-none text-right"
                   style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
@@ -133,7 +133,7 @@ export default function BoxesPage() {
                 <button onClick={handleSaveWeight} disabled={saving}
                   className="py-3 rounded-xl text-sm font-bold disabled:opacity-50"
                   style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                  {saving ? "กำลังบันทึก..." : "💾 บันทึกน้ำหนัก"}
+                  {saving ? "Recording..." : "💾 Save"}
                 </button>
               </div>
             </div>
@@ -146,14 +146,14 @@ export default function BoxesPage() {
                 value={searchBatch}
                 onChange={e => setSearchBatch(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSearch()}
-                placeholder="พิมพ์ Batch เช่น H503260522"
+                placeholder=""
                 className="flex-1 rounded-lg border px-4 py-2.5 text-sm outline-none"
                 style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
               />
               <button onClick={handleSearch}
                 className="px-6 py-2.5 rounded-lg text-sm font-semibold"
                 style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                🔍 ค้นหา
+                🔍 Search
               </button>
             </div>
 
@@ -161,7 +161,7 @@ export default function BoxesPage() {
             {searched && !loading && boxes.length > 0 && (
               <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
-                  { label: "กล่องทั้งหมด", value: total, color: "var(--color-anu-text)" },
+                  { label: "All boxes", value: total, color: "var(--color-anu-text)" },
                   { label: "AF", value: afCount, color: "var(--color-anu-success)" },
                   { label: "AF Rate", value: `${afRate}%`, color: parseFloat(afRate) >= 90 ? "var(--color-anu-success)" : "var(--color-anu-warning)" },
                 ].map(s => (
@@ -174,16 +174,16 @@ export default function BoxesPage() {
             )}
 
             {/* Table */}
-            {loading && <p style={{ color: "var(--color-anu-muted)" }}>กำลังค้นหา...</p>}
+            {loading && <p style={{ color: "var(--color-anu-muted)" }}>Searching...</p>}
             {searched && !loading && boxes.length === 0 && (
-              <p style={{ color: "var(--color-anu-danger)" }}>⚠️ ไม่พบ Batch "{searchBatch}"</p>
+              <p style={{ color: "var(--color-anu-danger)" }}>⚠️ Batch not found. "{searchBatch}"</p>
             )}
             {boxes.length > 0 && (
               <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ background: "var(--color-anu-elevated)" }}>
-                      {["กล่อง", "เวลา", "Status", "Defects", "Net (kg)", "Total (kg)", "ชั่งโดย", "ตรวจโดย", ""].map(h => (
+                      {["Box no.", "Time", "Status", "Defects", "Net (kg)", "Total (kg)", "Wieght by", "Check by", ""].map(h => (
                         <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap"
                             style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
                           {h}
@@ -222,7 +222,7 @@ export default function BoxesPage() {
                           }}
                             className="px-3 py-1.5 rounded-lg text-xs border transition hover:opacity-80"
                             style={{ borderColor: "var(--color-anu-glow)", color: "var(--color-anu-glow)" }}>
-                            ✏️ แก้น้ำหนัก
+                            ✏️ Edit
                           </button>
                         </td>
                       </tr>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const ROLES = ["operator", "supervisor", "manager", "admin"];
+const ROLES = ["operator", "qc_technician", "production_operator", "warehouse_operator", "supervisor", "manager", "admin"];
 
 function generatePassword(): string {
   const letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -72,7 +72,7 @@ export default function AccountPage() {
       .from("app_users")
       .select("*")
       .order("fullname");
-    if (error) { showMsg(`❌ โหลดข้อมูลไม่สำเร็จ: ${error.message}`, "error"); return; }
+    if (error) { showMsg(`❌ Data loading failed.: ${error.message}`, "error"); return; }
     setUsers(data || []);
   }
 
@@ -82,13 +82,13 @@ export default function AccountPage() {
   }
 
   async function handleAdd() {
-    if (!fn.trim()) { showMsg("⚠️ กรุณากรอกชื่อ-นามสกุล", "error"); return; }
+    if (!fn.trim()) { showMsg("⚠️ Please fill in the user information.", "error"); return; }
 
     const finalUn = previewUn || generateUsername(fn);
     const finalPw = previewPw || generatePassword();
 
     const dup = users.find(u => u.username === finalUn);
-    if (dup) { showMsg(`❌ Username "${finalUn}" มีในระบบแล้ว`, "error"); return; }
+    if (dup) { showMsg(`❌ Username "${finalUn}" This user is already in the system.`, "error"); return; }
 
     setSaving(true);
     const { error } = await supabase.from("app_users").insert([{
@@ -100,10 +100,10 @@ export default function AccountPage() {
       first_login:   true,
     }]);
 
-    if (error) { showMsg(`❌ บันทึกไม่สำเร็จ: ${error.message}`, "error"); setSaving(false); return; }
+    if (error) { showMsg(`❌ Saving failed.Saving failed.: ${error.message}`, "error"); setSaving(false); return; }
 
     await loadUsers();
-    showMsg(`✅ เพิ่มผู้ใช้ "${fn.trim()}" สำเร็จ  |  Username: ${finalUn}  |  Password: ${finalPw}`, "success");
+    showMsg(`✅ เพิ่มผู้ใช้ "${fn.trim()}" success  |  Username: ${finalUn}  |  Password: ${finalPw}`, "success");
     setFn(""); setEid(""); setRole("operator");
     setPreviewPw(generatePassword());
     setSaving(false);
@@ -118,9 +118,9 @@ export default function AccountPage() {
   }
 
   async function handleSaveEdit() {
-    if (!editFn.trim() || !editUn.trim()) { showMsg("⚠️ ชื่อและ Username ห้ามว่าง", "error"); return; }
+    if (!editFn.trim() || !editUn.trim()) { showMsg("⚠️ The name and username cannot be empty.", "error"); return; }
     const dup = users.find(u => u.username === editUn.trim() && u.id !== editingUser.id);
-    if (dup) { showMsg("❌ Username นี้มีคนอื่นใช้แล้ว", "error"); return; }
+    if (dup) { showMsg("❌ This username is already in use.", "error"); return; }
 
     setSaving(true);
     const { error } = await supabase.from("app_users").update({
@@ -130,25 +130,25 @@ export default function AccountPage() {
       role:     editRole,
     }).eq("id", editingUser.id);
 
-    if (error) { showMsg(`❌ อัปเดตไม่สำเร็จ: ${error.message}`, "error"); setSaving(false); return; }
+    if (error) { showMsg(`❌ Update failed.: ${error.message}`, "error"); setSaving(false); return; }
 
     await loadUsers();
-    showMsg("🎉 อัปเดตข้อมูลสำเร็จ", "success");
+    showMsg("🎉 Data updated successfully.", "success");
     setEditingUser(null);
     setSaving(false);
   }
 
   async function handleDelete(target: any) {
     if (target.role === "admin" || target.username === "admin") {
-      showMsg("❌ ไม่สามารถลบบัญชี Administrator ได้", "error"); return;
+      showMsg("❌ The Administrator account cannot be deleted.", "error"); return;
     }
     if (target.username === user?.username) {
-      showMsg("❌ ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่", "error"); return;
+      showMsg("❌ You cannot delete the currently active account.", "error"); return;
     }
     const { error } = await supabase.from("app_users").delete().eq("id", target.id);
-    if (error) { showMsg(`❌ ลบไม่สำเร็จ: ${error.message}`, "error"); return; }
+    if (error) { showMsg(`❌ Delete failed.: ${error.message}`, "error"); return; }
     await loadUsers();
-    showMsg(`🗑️ ลบผู้ใช้ "${target.fullname}" เรียบร้อยแล้ว`, "success");
+    showMsg(`🗑️ Delete user "${target.fullname}" finished`, "success");
   }
 
   async function handleResetPassword(target: any) {
@@ -157,9 +157,9 @@ export default function AccountPage() {
       password_hash: newPw,
       first_login:   true,
     }).eq("id", target.id);
-    if (error) { showMsg(`❌ Reset ไม่สำเร็จ: ${error.message}`, "error"); return; }
+    if (error) { showMsg(`❌ Reset failed.: ${error.message}`, "error"); return; }
     await loadUsers();
-    showMsg(`🔑 Reset password "${target.fullname}" สำเร็จ  |  Password ใหม่: ${newPw}`, "success");
+    showMsg(`🔑 Reset password "${target.fullname}" success  |  New Password: ${newPw}`, "success");
   }
 
   return (
@@ -169,14 +169,14 @@ export default function AccountPage() {
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.push("/dashboard")}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← หลัก
+            ← Home
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>👥 Account Management</h1>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {[["add", "➕ เพิ่มผู้ใช้ใหม่"], ["manage", "⚙️ จัดการ/แก้ไข"]].map(([key, label]) => (
+          {[["add", "➕ Add new user"], ["manage", "⚙️ Manage/Edit"]].map(([key, label]) => (
             <button key={key} onClick={() => { setTab(key as any); setEditingUser(null); }}
               className="px-4 py-2 rounded-lg text-sm font-medium transition"
               style={tab === key
@@ -203,36 +203,36 @@ export default function AccountPage() {
         {tab === "add" && (
           <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6" style={cardStyle}>
             <p className="text-sm font-semibold mb-4" style={{ color: "var(--color-anu-text)" }}>
-              📝 กรอกข้อมูลผู้ใช้ใหม่
+              📝 Fill in new user information.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
               <div className="sm:col-span-2">
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ชื่อ-นามสกุล *</p>
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Name-Surname *</p>
                 <input
                   type="text"
                   value={fn}
                   onChange={e => setFn(e.target.value)}
-                  placeholder="เช่น สมชาย ใจดี"
+                  placeholder=""
                   className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>รหัสพนักงาน</p>
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Employee ID</p>
                 <input
                   type="text"
                   value={eid}
                   onChange={e => setEid(e.target.value)}
-                  placeholder="เช่น 67000001"
+                  placeholder=""
                   className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ตำแหน่ง</p>
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Position</p>
                 <select
                   value={role}
                   onChange={e => setRole(e.target.value)}
@@ -248,7 +248,7 @@ export default function AccountPage() {
                      style={{ background: "var(--color-anu-elevated)", border: "1px solid var(--color-anu-border)" }}>
                   <p className="text-xs font-medium uppercase tracking-wider mb-1"
                      style={{ color: "var(--color-anu-muted)" }}>
-                    ข้อมูลที่จะสร้างให้อัตโนมัติ
+                    Data to be automatically generated.
                   </p>
                   <div className="flex items-center gap-3">
                     <span className="text-xs w-24" style={{ color: "var(--color-anu-muted)" }}>Username</span>
@@ -269,11 +269,11 @@ export default function AccountPage() {
                       className="text-xs px-2 py-1 rounded-lg border transition hover:opacity-80"
                       style={{ borderColor: "var(--color-anu-border)", color: "var(--color-anu-muted)" }}
                     >
-                      🔄 สุ่มใหม่
+                      🔄 Random again.
                     </button>
                   </div>
                   <p className="text-xs mt-1" style={{ color: "var(--color-anu-danger)" }}>
-                    ⚠️ บันทึก Username และ Password นี้ก่อนกดบันทึก เพราะจะไม่แสดงอีก
+                    ⚠️ Please save this Username and Password before clicking save, as they will not be displayed again.
                   </p>
                 </div>
               )}
@@ -285,7 +285,7 @@ export default function AccountPage() {
               className="mt-6 px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 transition hover:opacity-90"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}
             >
-              {saving ? "กำลังบันทึก..." : "💾 บันทึกและสร้างบัญชี"}
+              {saving ? "Recording..." : "💾 Save and create an account."}
             </button>
           </div>
         )}
@@ -298,13 +298,13 @@ export default function AccountPage() {
               <div className="rounded-xl border p-6 max-w-2xl"
                    style={{ ...cardStyle, borderColor: "var(--color-anu-glow)" }}>
                 <p className="text-sm font-semibold mb-4" style={{ color: "var(--color-anu-glow)" }}>
-                  ✏️ แก้ไขข้อมูล: {editingUser.fullname}
+                  ✏️ Edit information: {editingUser.fullname}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { label: "ชื่อ-นามสกุล *", value: editFn,  set: setEditFn,  ph: "ชื่อ นามสกุล"   },
-                    { label: "รหัสพนักงาน",     value: editEid, set: setEditEid, ph: "เช่น 67000001"  },
-                    { label: "Username *",       value: editUn,  set: setEditUn,  ph: "username"       },
+                    { label: "Name-Surname *", value: editFn,  set: setEditFn,  ph: ""   },
+                    { label: "Employee ID",     value: editEid, set: setEditEid, ph: ""  },
+                    { label: "Username *",       value: editUn,  set: setEditUn,  ph: ""       },
                   ].map(f => (
                     <div key={f.label}>
                       <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{f.label}</p>
@@ -318,7 +318,7 @@ export default function AccountPage() {
                     </div>
                   ))}
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>ตำแหน่ง</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Position</p>
                     <select
                       value={editRole}
                       onChange={e => setEditRole(e.target.value)}
@@ -336,14 +336,14 @@ export default function AccountPage() {
                     className="px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
                     style={{ background: "var(--color-anu-accent)", color: "#fff" }}
                   >
-                    {saving ? "กำลังบันทึก..." : "💾 บันทึก"}
+                    {saving ? "Recording..." : "💾 Save"}
                   </button>
                   <button
                     onClick={() => setEditingUser(null)}
                     className="px-6 py-2.5 rounded-lg text-sm border"
                     style={cardStyle}
                   >
-                    ❌ ยกเลิก
+                    ❌ Cancel
                   </button>
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function AccountPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ background: "var(--color-anu-elevated)" }}>
-                    {["ชื่อ-นามสกุล", "รหัสพนักงาน", "Username", "ตำแหน่ง", "สถานะ", ""].map(h => (
+                    {["Name-Surname", "Employee ID", "Username", "Position", "Status", ""].map(h => (
                       <th key={h} className="px-4 py-3 text-left font-medium"
                           style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
                         {h}
@@ -389,7 +389,7 @@ export default function AccountPage() {
                       <td className="px-4 py-3">
                         <span className="text-xs"
                               style={{ color: u.first_login ? "var(--color-anu-warning)" : "var(--color-anu-success)" }}>
-                          {u.first_login ? "⚠️ ยังไม่เปลี่ยน password" : "✅ ปกติ"}
+                          {u.first_login ? "⚠️ Password has not been changed yet." : "✅ Normal"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -415,7 +415,7 @@ export default function AccountPage() {
                             style={{ borderColor: "var(--color-anu-danger)", color: "var(--color-anu-danger)" }}
                             disabled={u.role === "admin" || u.username === user?.username}
                           >
-                            🗑️ ลบ
+                            🗑️ Delete
                           </button>
                         </div>
                       </td>
@@ -424,7 +424,7 @@ export default function AccountPage() {
                   {users.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>
-                        ไม่มีข้อมูล
+                        No information available.
                       </td>
                     </tr>
                   )}

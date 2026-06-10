@@ -30,13 +30,13 @@ export default function LoginPage() {
       .single();
 
     if (err || !data) {
-      setError("Username หรือ Password ไม่ถูกต้อง");
+      setError("Username or Password is incorrect.");
       setLoading(false);
       return;
     }
 
     if (data.password_hash !== password) {
-      setError("Username หรือ Password ไม่ถูกต้อง");
+      setError("Username or Password is incorrect.");
       setLoading(false);
       return;
     }
@@ -56,13 +56,13 @@ export default function LoginPage() {
   async function handleChangePassword() {
     setPwError("");
     if (newPw.length < 6) {
-      setPwError("Password ต้องมีอย่างน้อย 6 ตัวอักษร"); return;
+      setPwError("Password must be least 6 characters long."); return;
     }
     if (newPw !== confirmPw) {
-      setPwError("Password ไม่ตรงกัน กรุณากรอกใหม่"); return;
+      setPwError("Password does not match. Please enter a new one."); return;
     }
     if (newPw === pendingUser.password_hash) {
-      setPwError("Password ใหม่ต้องไม่ซ้ำกับ Password เดิม"); return;
+      setPwError("New password must be different from the old password."); return;
     }
 
     setPwSaving(true);
@@ -72,7 +72,7 @@ export default function LoginPage() {
       .eq("id", pendingUser.id);
 
     if (error) {
-      setPwError(`บันทึกไม่สำเร็จ: ${error.message}`);
+      setPwError(`Saving failed.: ${error.message}`);
       setPwSaving(false);
       return;
     }
@@ -102,25 +102,25 @@ export default function LoginPage() {
             <div className="text-center">
               <p className="text-2xl mb-1">🔐</p>
               <h2 className="text-base font-bold" style={{ color: "var(--color-anu-text)" }}>
-                ต้องเปลี่ยน Password ก่อนใช้งาน
+                New users must change their password before use.
               </h2>
               <p className="text-xs mt-1" style={{ color: "var(--color-anu-muted)" }}>
-                บัญชี{" "}
+                Username{" "}
                 <span style={{ color: "var(--color-anu-glow)" }}>{pendingUser?.username}</span>{" "}
-                ยังใช้ password เริ่มต้นอยู่
+                still using the default password.
               </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                Password ใหม่
+                New password
               </label>
               <input
                 type="password"
                 value={newPw}
                 onChange={e => setNewPw(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                placeholder="อย่างน้อย 6 ตัวอักษร"
+                placeholder="Least 6 characters"
                 className={inputCls}
                 style={inputSty}
               />
@@ -128,14 +128,14 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                ยืนยัน Password ใหม่
+                Confirm new password
               </label>
               <input
                 type="password"
                 value={confirmPw}
                 onChange={e => setConfirmPw(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                placeholder="กรอก password อีกครั้ง"
+                placeholder="Enter password again."
                 className={inputCls}
                 style={inputSty}
               />
@@ -153,11 +153,11 @@ export default function LoginPage() {
               className="rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}
             >
-              {pwSaving ? "กำลังบันทึก..." : "✅ ยืนยันเปลี่ยน Password"}
+              {pwSaving ? "Recording" : "✅ Save"}
             </button>
 
             <p className="text-xs text-center" style={{ color: "var(--color-anu-muted)" }}>
-              ไม่สามารถข้ามขั้นตอนนี้ได้
+              This step cannot be skipped.
             </p>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function LoginPage() {
               onKeyDown={e => e.key === "Enter" && handleLogin()}
               className={inputCls}
               style={inputSty}
-              placeholder="กรอก username"
+              placeholder="username"
             />
           </div>
 
@@ -207,7 +207,7 @@ export default function LoginPage() {
               onKeyDown={e => e.key === "Enter" && handleLogin()}
               className={inputCls}
               style={inputSty}
-              placeholder="กรอก password"
+              placeholder="password"
             />
           </div>
 
