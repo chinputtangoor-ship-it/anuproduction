@@ -8,6 +8,7 @@ export default function BoxesPage() {
   const router = useRouter();
   const [searchBatch, setSearchBatch] = useState("");
   const [boxes, setBoxes] = useState<any[]>([]);
+  const [rejections, setRejections] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [editBox, setEditBox] = useState<any>(null);
@@ -32,12 +33,22 @@ export default function BoxesPage() {
     if (!searchBatch.trim()) return;
     setLoading(true);
     setSearched(true);
-    const { data } = await supabase
-      .from("boxes")
-      .select("*")
-      .eq("batch", searchBatch.trim())
-      .order("box_number");
-    setBoxes(data || []);
+
+    const [{ data: boxData }, { data: rejectData }] = await Promise.all([
+      supabase
+        .from("boxes")
+        .select("*")
+        .eq("batch", searchBatch.trim())
+        .order("box_number"),
+      supabase
+        .from("rejection")
+        .select("*")
+        .eq("batch", searchBatch.trim())
+        .order("created_at"),
+    ]);
+
+    setBoxes(boxData || []);
+    setRejections(rejectData || []);
     setLoading(false);
   }
 
@@ -66,6 +77,11 @@ export default function BoxesPage() {
   const total = boxes.length;
   const afRate = total > 0 ? ((afCount / total) * 100).toFixed(1) : "0";
 
+  const totalAts    = rejections.reduce((s, r) => s + (r.ats_kg   || 0), 0);
+  const totalPrint  = rejections.reduce((s, r) => s + (r.print_kg || 0), 0);
+  const totalCam    = rejections.reduce((s, r) => s + (r.cam_kg   || 0), 0);
+  const totalReject = rejections.reduce((s, r) => s + (r.total_kg || 0), 0);
+
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
       <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -85,8 +101,6 @@ export default function BoxesPage() {
         {editBox ? (
           <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
             <div className="rounded-xl border p-6 flex flex-col gap-4" style={cardStyle}>
-
-              {/* Info */}
               <div className="rounded-lg p-3" style={{ background: "var(--color-anu-elevated)" }}>
                 <div className="flex items-center gap-4">
                   <p className="text-4xl font-black" style={{ color: "var(--color-anu-accent)" }}>#{editBox.box_number}</p>
@@ -100,15 +114,10 @@ export default function BoxesPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Weight inputs */}
               <div>
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Net Weight (kg)</p>
                 <input
-                  type="number"
-                  step="0.001"
-                  value={netWeight}
-                  placeholder="Net weight"
+                  type="number" step="0.001" value={netWeight} placeholder="Net weight"
                   onChange={e => setNetWeight(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-lg font-bold outline-none text-right"
                   style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
@@ -117,18 +126,13 @@ export default function BoxesPage() {
               <div>
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Total Weight (kg)</p>
                 <input
-                  type="number"
-                  step="0.001"
-                  value={totalWeight}
-                  placeholder="Total weight"
+                  type="number" step="0.001" value={totalWeight} placeholder="Total weight"
                   onChange={e => setTotalWeight(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-lg font-bold outline-none text-right"
                   style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                 />
               </div>
-
               {saveMsg && <p className="text-sm text-center" style={{ color: "var(--color-anu-success)" }}>{saveMsg}</p>}
-
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={handleSaveWeight} disabled={saving}
                   className="py-3 rounded-xl text-sm font-bold disabled:opacity-50"
@@ -157,7 +161,7 @@ export default function BoxesPage() {
               </button>
             </div>
 
-            {/* Summary */}
+            {/* Box Summary */}
             {searched && !loading && boxes.length > 0 && (
               <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
@@ -173,7 +177,77 @@ export default function BoxesPage() {
               </div>
             )}
 
-            {/* Table */}
+            {/* ── Rejection Summary ── */}
+            {searched && !loading && (
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-anu-muted)" }}>
+                  🗑️ Rejection — {searchBatch}
+                </h2>
+
+                {rejections.length === 0 ? (
+                  <div className="rounded-xl border p-4 text-center text-sm" style={cardStyle}>
+                    <span style={{ color: "var(--color-anu-success)" }}>✅ No rejection recorded</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Reject kg cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                      {[
+                        { label: "ATS (kg)",   value: totalAts },
+                        { label: "Print (kg)", value: totalPrint },
+                        { label: "CAM (kg)",   value: totalCam },
+                        { label: "Total Reject (kg)", value: totalReject, highlight: true },
+                      ].map(s => (
+                        <div key={s.label} className="rounded-xl border p-4 text-center" style={cardStyle}>
+                          <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{s.label}</p>
+                          <p
+                            className="text-2xl font-black"
+                            style={{ color: s.highlight ? "var(--color-anu-danger)" : "var(--color-anu-text)" }}
+                          >
+                            {s.value.toFixed(3)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Reject rows table */}
+                    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr style={{ background: "var(--color-anu-elevated)" }}>
+                            {["#", "Line", "ATS (kg)", "Print (kg)", "CAM (kg)", "Total (kg)", "Check by", "Date"].map(h => (
+                              <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap"
+                                  style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rejections.map((r, i) => (
+                            <tr key={r.id}
+                                style={{ background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)", borderTop: "1px solid var(--color-anu-border)" }}>
+                              <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>{i + 1}</td>
+                              <td className="px-4 py-3 font-medium" style={{ color: "var(--color-anu-text)" }}>{r.line || "-"}</td>
+                              <td className="px-4 py-3" style={{ color: "var(--color-anu-text)" }}>{r.ats_kg?.toFixed(3) ?? "-"}</td>
+                              <td className="px-4 py-3" style={{ color: "var(--color-anu-text)" }}>{r.print_kg?.toFixed(3) ?? "-"}</td>
+                              <td className="px-4 py-3" style={{ color: "var(--color-anu-text)" }}>{r.cam_kg?.toFixed(3) ?? "-"}</td>
+                              <td className="px-4 py-3 font-bold" style={{ color: "var(--color-anu-danger)" }}>{r.total_kg?.toFixed(3) ?? "-"}</td>
+                              <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>{r.check_by || "-"}</td>
+                              <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>
+                                {r.created_at?.slice(0, 16).replace("T", " ")}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Box Table */}
             {loading && <p style={{ color: "var(--color-anu-muted)" }}>Searching...</p>}
             {searched && !loading && boxes.length === 0 && (
               <p style={{ color: "var(--color-anu-danger)" }}>⚠️ Batch not found. "{searchBatch}"</p>
