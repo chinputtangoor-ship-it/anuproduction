@@ -4,24 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/pages/Logo";
 import { supabase } from "@/lib/supabase";
-import { useI18n } from "@/lib/i18n/context";
-import { LangToggle } from "@/lib/i18n/LangToggle";
 
 export default function LoginPage() {
-  const router  = useRouter();
-  const { t }   = useI18n();
-
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [showChangePw, setShowChangePw] = useState(false);
-  const [pendingUser, setPendingUser]   = useState<any>(null);
-  const [newPw, setNewPw]               = useState("");
-  const [confirmPw, setConfirmPw]       = useState("");
-  const [pwError, setPwError]           = useState("");
-  const [pwSaving, setPwSaving]         = useState(false);
+  const [pendingUser, setPendingUser] = useState<any>(null);
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   async function handleLogin() {
     setLoading(true);
@@ -34,13 +30,13 @@ export default function LoginPage() {
       .single();
 
     if (err || !data) {
-      setError(t("login.wrong_credential"));
+      setError("Username or Password is incorrect.");
       setLoading(false);
       return;
     }
 
     if (data.password_hash !== password) {
-      setError(t("login.wrong_credential"));
+      setError("Username or Password is incorrect.");
       setLoading(false);
       return;
     }
@@ -60,13 +56,13 @@ export default function LoginPage() {
   async function handleChangePassword() {
     setPwError("");
     if (newPw.length < 6) {
-      setPwError(t("login.err_too_short")); return;
+      setPwError("Password must be least 6 characters long."); return;
     }
     if (newPw !== confirmPw) {
-      setPwError(t("login.err_not_match")); return;
+      setPwError("Password does not match. Please enter a new one."); return;
     }
     if (newPw === pendingUser.password_hash) {
-      setPwError(t("login.err_same_as_old")); return;
+      setPwError("New password must be different from the old password."); return;
     }
 
     setPwSaving(true);
@@ -76,7 +72,7 @@ export default function LoginPage() {
       .eq("id", pendingUser.id);
 
     if (error) {
-      setPwError(`${t("login.err_save_failed")}: ${error.message}`);
+      setPwError(`Saving failed.: ${error.message}`);
       setPwSaving(false);
       return;
     }
@@ -88,20 +84,15 @@ export default function LoginPage() {
 
   const inputCls = "rounded-lg border px-3 py-2.5 text-sm outline-none transition w-full";
   const inputSty = {
-    background:  "var(--color-anu-elevated)",
+    background: "var(--color-anu-elevated)",
     borderColor: "var(--color-anu-border)",
-    color:       "var(--color-anu-text)",
+    color: "var(--color-anu-text)",
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
 
-      {/* ── Lang toggle — มุมขวาบน ── */}
-      <div className="fixed top-4 right-4">
-        <LangToggle />
-      </div>
-
-      {/* ── First-login modal ── */}
+      {/* First-login modal */}
       {showChangePw && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
              style={{ background: "rgba(0,0,0,0.7)" }}>
@@ -111,42 +102,40 @@ export default function LoginPage() {
             <div className="text-center">
               <p className="text-2xl mb-1">🔐</p>
               <h2 className="text-base font-bold" style={{ color: "var(--color-anu-text)" }}>
-                {t("login.change_pw_title")}
+                New users must change their password before use.
               </h2>
               <p className="text-xs mt-1" style={{ color: "var(--color-anu-muted)" }}>
                 Username{" "}
                 <span style={{ color: "var(--color-anu-glow)" }}>{pendingUser?.username}</span>{" "}
-                {t("login.change_pw_subtitle")}
+                still using the default password.
               </p>
             </div>
 
-            {/* New password */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                {t("login.new_password")}
+                New password
               </label>
               <input
                 type="password"
                 value={newPw}
                 onChange={e => setNewPw(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                placeholder={t("login.new_password_hint")}
+                placeholder="Least 6 characters"
                 className={inputCls}
                 style={inputSty}
               />
             </div>
 
-            {/* Confirm password */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                {t("login.confirm_password")}
+                Confirm new password
               </label>
               <input
                 type="password"
                 value={confirmPw}
                 onChange={e => setConfirmPw(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                placeholder={t("login.confirm_hint")}
+                placeholder="Enter password again."
                 className={inputCls}
                 style={inputSty}
               />
@@ -164,17 +153,17 @@ export default function LoginPage() {
               className="rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}
             >
-              {pwSaving ? t("login.saving_pw") : t("login.save_pw")}
+              {pwSaving ? "Recording" : "✅ Save"}
             </button>
 
             <p className="text-xs text-center" style={{ color: "var(--color-anu-muted)" }}>
-              {t("login.cannot_skip")}
+              This step cannot be skipped.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Login card ── */}
+      {/* Login card */}
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-3 mb-8">
           <Logo className="w-14 h-14" />
@@ -192,10 +181,9 @@ export default function LoginPage() {
         <div className="rounded-xl border p-6 flex flex-col gap-4"
              style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}>
 
-          {/* Username */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-              {t("login.username")}
+              Username
             </label>
             <input
               type="text"
@@ -208,10 +196,9 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Password */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-              {t("login.password")}
+              Password
             </label>
             <input
               type="password"
@@ -236,12 +223,12 @@ export default function LoginPage() {
             className="mt-1 rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}
           >
-            {loading ? t("login.logging_in") : t("login.login_btn")}
+            {loading ? "Logging in..." : "Log in"}
           </button>
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: "var(--color-anu-muted)" }}>
-          {t("login.version")}
+          ANU Production Intelligence · Ver 2.0
         </p>
       </div>
     </main>
