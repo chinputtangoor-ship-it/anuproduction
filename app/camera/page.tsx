@@ -3,33 +3,32 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 
 const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
 const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
 
 export default function CameraPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [step, setStep] = useState<"line" | "batch" | "record">("line");
-  const [selLine, setSelLine] = useState("");
+  const router  = useRouter();
+  const { t }   = useI18n();
+  const [user, setUser]         = useState<any>(null);
+  const [step, setStep]         = useState<"line" | "batch" | "record">("line");
+  const [selLine, setSelLine]   = useState("");
   const [selBatch, setSelBatch] = useState("");
-  const [batches, setBatches] = useState<any[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [batches, setBatches]   = useState<any[]>([]);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
 
-  // Camera 1 — ใช้ string เพื่อให้ช่องว่างได้
   const [c1Pass, setC1Pass] = useState("");
   const [c1Defs, setC1Defs] = useState<{ type: string; qty: string }[]>(
     Array(4).fill(null).map(() => ({ type: "-", qty: "" }))
   );
-
-  // Camera 2
   const [c2Pass, setC2Pass] = useState("");
   const [c2Defs, setC2Defs] = useState<{ type: string; qty: string }[]>(
     Array(4).fill(null).map(() => ({ type: "-", qty: "" }))
   );
 
-  const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
+  const cardStyle  = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
   const inputStyle = { background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" };
 
   const c1PassNum = parseFloat(c1Pass) || 0;
@@ -92,7 +91,7 @@ export default function CameraPage() {
   }
 
   function DefectRows({
-    defs, setDefs
+    defs, setDefs,
   }: { defs: { type: string; qty: string }[]; setDefs: (d: any) => void }) {
     return (
       <div className="flex flex-col gap-2 mt-3">
@@ -100,11 +99,7 @@ export default function CameraPage() {
           <div key={i} className="grid grid-cols-2 gap-2">
             <select
               value={d.type}
-              onChange={e => {
-                const n = [...defs];
-                n[i] = { ...n[i], type: e.target.value };
-                setDefs(n);
-              }}
+              onChange={e => { const n = [...defs]; n[i] = { ...n[i], type: e.target.value }; setDefs(n); }}
               className="rounded-lg border px-2 py-2 text-sm outline-none"
               style={inputStyle}
             >
@@ -112,15 +107,8 @@ export default function CameraPage() {
               {DEFECT_LIST.map(dl => <option key={dl}>{dl}</option>)}
             </select>
             <input
-              type="number"
-              min="0"
-              value={d.qty}
-              placeholder=""
-              onChange={e => {
-                const n = [...defs];
-                n[i] = { ...n[i], qty: e.target.value };
-                setDefs(n);
-              }}
+              type="number" min="0" value={d.qty} placeholder=""
+              onChange={e => { const n = [...defs]; n[i] = { ...n[i], qty: e.target.value }; setDefs(n); }}
               className="rounded-lg border px-2 py-2 text-sm outline-none text-right"
               style={inputStyle}
             />
@@ -129,6 +117,16 @@ export default function CameraPage() {
       </div>
     );
   }
+
+  const backLabel =
+    step === "line"  ? t("common.home") :
+    step === "batch" ? t("common.change_line") :
+                       t("common.change_batch");
+
+  const CAMERAS = [
+    { labelKey: "camera.camera1", pass: c1Pass, setPass: setC1Pass, passNum: c1PassNum, defs: c1Defs, setDefs: setC1Defs, color: "#54a0ff" },
+    { labelKey: "camera.camera2", pass: c2Pass, setPass: setC2Pass, passNum: c2PassNum, defs: c2Defs, setDefs: setC2Defs, color: "var(--color-anu-success)" },
+  ];
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -141,23 +139,32 @@ export default function CameraPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
+            ← {backLabel}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>📷 Camera Analysis</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
+            📷 {t("camera.title")}
+          </h1>
         </div>
 
         {/* Breadcrumb */}
         {step !== "line" && (
           <div className="flex gap-2 mb-6 text-sm">
             <span style={{ color: "var(--color-anu-glow)" }}>{selLine}</span>
-            {selBatch && <><span style={{ color: "var(--color-anu-muted)" }}>›</span><span style={{ color: "var(--color-anu-glow)" }}>{selBatch}</span></>}
+            {selBatch && (
+              <>
+                <span style={{ color: "var(--color-anu-muted)" }}>›</span>
+                <span style={{ color: "var(--color-anu-glow)" }}>{selBatch}</span>
+              </>
+            )}
           </div>
         )}
 
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("common.select_line")}
+            </p>
             <div className="grid grid-cols-4 lg:grid-cols-6 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => { setSelLine(l); loadBatches(l); setStep("batch"); }}
@@ -173,9 +180,13 @@ export default function CameraPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("common.select_batch")}
+            </p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>
+                  {t("camera.no_batch", { line: selLine })}
+                </p>
               : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {batches.map(b => (
                     <button key={b.batch} onClick={() => { setSelBatch(b.batch); setStep("record"); }}
@@ -193,30 +204,25 @@ export default function CameraPage() {
         {step === "record" && (
           <div className="flex flex-col gap-6">
 
-            {/* 2 cameras side by side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {[
-                { label: "📸 Camera 1", pass: c1Pass, setPass: setC1Pass, passNum: c1PassNum, defs: c1Defs, setDefs: setC1Defs, color: "#54a0ff" },
-                { label: "📸 Camera 2", pass: c2Pass, setPass: setC2Pass, passNum: c2PassNum, defs: c2Defs, setDefs: setC2Defs, color: "var(--color-anu-success)" },
-              ].map(cam => (
-                <div key={cam.label} className="rounded-xl border p-5" style={cardStyle}>
+              {CAMERAS.map(cam => (
+                <div key={cam.labelKey} className="rounded-xl border p-5" style={cardStyle}>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-1 h-5 rounded-full" style={{ background: cam.color }} />
-                    <p className="text-sm font-bold" style={{ color: cam.color }}>{cam.label}</p>
+                    <p className="text-sm font-bold" style={{ color: cam.color }}>
+                      {t(cam.labelKey)}
+                    </p>
                   </div>
 
+                  {/* Pass rate */}
                   <div className="mb-4">
                     <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-                      Passing Rate (%)
+                      {t("camera.pass_rate")}
                     </p>
                     <div className="flex items-center gap-3">
                       <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={cam.pass}
-                        placeholder="0.00"
+                        type="number" min="0" max="100" step="0.01"
+                        value={cam.pass} placeholder="0.00"
                         onChange={e => cam.setPass(e.target.value)}
                         className="flex-1 rounded-lg border px-3 py-2.5 text-xl font-bold outline-none text-right"
                         style={inputStyle}
@@ -226,31 +232,37 @@ export default function CameraPage() {
                         %
                       </span>
                     </div>
-                    {/* Visual bar */}
                     <div className="mt-2 rounded-full overflow-hidden h-1.5" style={{ background: "var(--color-anu-elevated)" }}>
                       <div className="h-full rounded-full transition-all"
                            style={{
                              width: `${cam.passNum}%`,
-                             background: cam.passNum >= 98 ? "var(--color-anu-success)" : cam.passNum >= 95 ? "var(--color-anu-warning)" : "var(--color-anu-danger)"
+                             background: cam.passNum >= 98 ? "var(--color-anu-success)" : cam.passNum >= 95 ? "var(--color-anu-warning)" : "var(--color-anu-danger)",
                            }} />
                     </div>
                   </div>
 
+                  {/* Defects */}
                   <p className="text-xs mb-2 font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                    📌 Defects
+                    {t("camera.defects")}
                   </p>
                   <div className="grid grid-cols-2 gap-1 mb-1">
-                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>Defect type</p>
-                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>Quantity (pieces)</p>
+                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("camera.defect_type")}
+                    </p>
+                    <p className="text-xs px-2" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("camera.qty")}
+                    </p>
                   </div>
                   <DefectRows defs={cam.defs} setDefs={cam.setDefs} />
 
                   {/* Summary */}
                   <div className="mt-3 rounded-lg p-2 flex justify-between text-xs"
                        style={{ background: "var(--color-anu-elevated)" }}>
-                    <span style={{ color: "var(--color-anu-muted)" }}>Total Defect</span>
+                    <span style={{ color: "var(--color-anu-muted)" }}>
+                      {t("camera.total_defect")}
+                    </span>
                     <span style={{ color: cam.color, fontWeight: 700 }}>
-                      {cam.defs.filter(d => d.type !== "-").reduce((s, d) => s + (parseInt(d.qty) || 0), 0)} pieces
+                      {cam.defs.filter(d => d.type !== "-").reduce((s, d) => s + (parseInt(d.qty) || 0), 0)} {t("camera.pieces")}
                     </span>
                   </div>
                 </div>
@@ -260,18 +272,18 @@ export default function CameraPage() {
             {/* Save / Cancel */}
             {saved ? (
               <p className="text-center font-semibold" style={{ color: "var(--color-anu-success)" }}>
-                🎉 Successfully recorded!
+                {t("camera.saved")}
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-4 max-w-lg">
                 <button onClick={() => { setStep("batch"); setSelBatch(""); }}
                   className="py-3 rounded-xl border text-sm font-medium" style={cardStyle}>
-                  ❌ Cancel
+                  {t("common.cancel")}
                 </button>
                 <button onClick={handleSave} disabled={saving}
                   className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                   style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                  {saving ? "Recording..." : "💾 Save"}
+                  {saving ? t("common.saving") : t("camera.save")}
                 </button>
               </div>
             )}

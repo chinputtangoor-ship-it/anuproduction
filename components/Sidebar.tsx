@@ -2,16 +2,17 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n/context";
 
 type MenuItem = {
-  label: string;
+  labelKey: string;
   icon: string;
   href: string;
   roles?: string[];
 };
 
 type Section = {
-  section: string;
+  sectionKey: string;
   icon: string;
   roles?: string[];
   items: MenuItem[];
@@ -19,64 +20,64 @@ type Section = {
 
 const MENU: Section[] = [
   {
-    section: "Planner",
+    sectionKey: "nav.planner",
     roles: ["admin", "supervisor", "planner"],
     icon: "🗓️",
     items: [
-      { label: "Plan", icon: "🗓️", href: "/plan" },
+      { labelKey: "dashboard.plan", icon: "🗓️", href: "/plan" },
     ],
   },
   {
-    section: "Quality",
+    sectionKey: "nav.quality",
     icon: "🔍",
     roles: ["admin", "supervisor", "qc_technician"],
     items: [
-      { label: "QC Form", icon: "🔍", href: "/quality" },
+      { labelKey: "dashboard.qc_form", icon: "🔍", href: "/quality" },
     ],
   },
   {
-    section: "Production",
+    sectionKey: "nav.production",
     icon: "🏭",
     roles: ["admin", "supervisor", "production_operator"],
     items: [],
   },
   {
-    section: "Post Production",
+    sectionKey: "nav.post_production",
     roles: ["admin", "supervisor", "operator"],
     icon: "📦",
     items: [
-      { label: "Box Status", icon: "📦", href: "/record"                                    },
-      { label: "Rejection",  icon: "🗑️", href: "/rejection"                                },
-      { label: "Backlog",    icon: "⏳", href: "/backlog"                                   },
-      { label: "Camera",     icon: "📷", href: "/camera",   roles: ["admin", "supervisor"]  },
-      { label: "Re-pass",    icon: "🔄", href: "/repass",   roles: ["admin", "supervisor"]  },
-      { label: "Analytics",  icon: "📈", href: "/analytics",roles: ["admin", "supervisor"]  },
+      { labelKey: "dashboard.box_status", icon: "📦", href: "/record"                                   },
+      { labelKey: "dashboard.rejection",  icon: "🗑️", href: "/rejection"                               },
+      { labelKey: "dashboard.backlog",    icon: "⏳", href: "/backlog"                                  },
+      { labelKey: "dashboard.camera",     icon: "📷", href: "/camera",   roles: ["admin", "supervisor"] },
+      { labelKey: "dashboard.repass",     icon: "🔄", href: "/repass",   roles: ["admin", "supervisor"] },
+      { labelKey: "dashboard.analytics",  icon: "📈", href: "/analytics",roles: ["admin", "supervisor"] },
     ],
   },
   {
-    section: "Warehouse",
+    sectionKey: "nav.warehouse",
     icon: "🏗️",
     roles: ["admin", "supervisor", "warehouse_operator"],
     items: [],
   },
   {
-    section: "Human Resources",
+    sectionKey: "nav.human_resources",
     icon: "🧑",
     roles: ["admin", "supervisor"],
     items: [],
   },
   {
-    section: "Account",
+    sectionKey: "nav.account",
     icon: "💰",
     roles: ["admin", "supervisor"],
     items: [],
   },
   {
-    section: "User",
+    sectionKey: "nav.user",
     icon: "👥",
     roles: ["admin"],
     items: [
-      { label: "User Account", icon: "👥", href: "/user", roles: ["admin"] },
+      { labelKey: "dashboard.user_account", icon: "👥", href: "/user", roles: ["admin"] },
     ],
   },
 ];
@@ -84,22 +85,23 @@ const MENU: Section[] = [
 export function Sidebar({ role }: { role: string }) {
   const pathname = usePathname();
   const router   = useRouter();
+  const { t }    = useI18n();
 
   const initialOpen = MENU.reduce<Record<string, boolean>>((acc, s) => {
     const hasActive = s.items.some(m => m.href === pathname);
-    acc[s.section] = hasActive;
+    acc[s.sectionKey] = hasActive;
     return acc;
   }, {});
 
   const [open, setOpen] = useState<Record<string, boolean>>(initialOpen);
 
-  const toggle = (section: string) =>
-    setOpen(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggle = (sectionKey: string) =>
+    setOpen(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
 
   const FULL_ACCESS = ["admin", "supervisor", "manager"];
 
   const visibleSections = MENU.filter((s) => {
-    if (s.section === "User") return s.roles?.includes(role) ?? false;
+    if (s.sectionKey === "nav.user") return s.roles?.includes(role) ?? false;
     return FULL_ACCESS.includes(role) || !s.roles || s.roles.includes(role);
   });
 
@@ -120,7 +122,7 @@ export function Sidebar({ role }: { role: string }) {
           }}
         >
           <span>🏠</span>
-          <span>หน้าหลัก</span>
+          <span>{t("common.home")}</span>
         </button>
       </nav>
 
@@ -130,13 +132,13 @@ export function Sidebar({ role }: { role: string }) {
       <nav className="flex flex-col gap-0.5 px-3">
         {visibleSections.map(s => {
           const visibleItems = s.items.filter(m => !m.roles || m.roles.includes(role));
-          const isOpen       = open[s.section] ?? false;
+          const isOpen       = open[s.sectionKey] ?? false;
           const hasActive    = visibleItems.some(m => m.href === pathname);
 
           return (
-            <div key={s.section}>
+            <div key={s.sectionKey}>
               <button
-                onClick={() => toggle(s.section)}
+                onClick={() => toggle(s.sectionKey)}
                 className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition"
                 style={{
                   color:      hasActive ? "var(--color-anu-glow)" : "var(--color-anu-text)",
@@ -146,7 +148,7 @@ export function Sidebar({ role }: { role: string }) {
               >
                 <div className="flex items-center gap-3">
                   <span>{s.icon}</span>
-                  <span>{s.section}</span>
+                  <span>{t(s.sectionKey)}</span>
                 </div>
                 <span
                   className="text-xs transition-transform duration-200"
@@ -178,14 +180,14 @@ export function Sidebar({ role }: { role: string }) {
                           }}
                         >
                           <span>{m.icon}</span>
-                          <span>{m.label}</span>
+                          <span>{t(m.labelKey)}</span>
                         </button>
                       );
                     })
                   ) : (
                     <p className="px-3 py-2 text-xs italic"
                        style={{ color: "var(--color-anu-muted)" }}>
-                      — Coming soon —
+                      — {t("common.coming_soon")} —
                     </p>
                   )}
                 </div>

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n/context";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type FieldDef = {
   key: string;
-  label: string;
   unit?: string;
   type?: "number" | "text" | "select";
   options?: string[];
@@ -14,88 +14,80 @@ type FieldDef = {
 
 type SectionDef = {
   id: string;
-  title: string;
   icon: string;
   color: string;
   fields: FieldDef[];
 };
 
-// ─── Section definitions (placeholder fields — swap in real ones later) ───────
+// ─── Section definitions ──────────────────────────────────────────────────────
 const SECTIONS: SectionDef[] = [
   {
     id: "dimension",
-    title: "Dimension",
     icon: "📐",
     color: "#7C5CFF",
     fields: [
-      { key: "dim_length",  label: "Length",  unit: "mm", type: "number" },
-      { key: "dim_width",   label: "Width",   unit: "mm", type: "number" },
-      { key: "dim_height",  label: "Height",  unit: "mm", type: "number" },
+      { key: "dim_length",  unit: "mm", type: "number" },
+      { key: "dim_width",   unit: "mm", type: "number" },
+      { key: "dim_height",  unit: "mm", type: "number" },
     ],
   },
   {
     id: "outside_dimension",
-    title: "Outside Dimension",
     icon: "📏",
     color: "#4EA8DE",
     fields: [
-      { key: "out_length",  label: "O/D Length",  unit: "mm", type: "number" },
-      { key: "out_width",   label: "O/D Width",   unit: "mm", type: "number" },
-      { key: "out_height",  label: "O/D Height",  unit: "mm", type: "number" },
+      { key: "out_length",  unit: "mm", type: "number" },
+      { key: "out_width",   unit: "mm", type: "number" },
+      { key: "out_height",  unit: "mm", type: "number" },
     ],
   },
   {
     id: "thickness",
-    title: "Thickness",
     icon: "🔲",
     color: "#F59E0B",
     fields: [
-      { key: "thk_top",    label: "Top",    unit: "mm", type: "number" },
-      { key: "thk_bottom", label: "Bottom", unit: "mm", type: "number" },
-      { key: "thk_side_a", label: "Side A", unit: "mm", type: "number" },
-      { key: "thk_side_b", label: "Side B", unit: "mm", type: "number" },
+      { key: "thk_top",    unit: "mm", type: "number" },
+      { key: "thk_bottom", unit: "mm", type: "number" },
+      { key: "thk_side_a", unit: "mm", type: "number" },
+      { key: "thk_side_b", unit: "mm", type: "number" },
     ],
   },
   {
     id: "cut_length",
-    title: "Cut Length",
     icon: "✂️",
     color: "#10B981",
     fields: [
-      { key: "cut_a", label: "Cut A", unit: "mm", type: "number" },
-      { key: "cut_b", label: "Cut B", unit: "mm", type: "number" },
+      { key: "cut_a", unit: "mm", type: "number" },
+      { key: "cut_b", unit: "mm", type: "number" },
     ],
   },
   {
     id: "weight",
-    title: "Weight",
     icon: "⚖️",
     color: "#EC4899",
     fields: [
-      { key: "weight_gross", label: "Gross Weight", unit: "g", type: "number" },
-      { key: "weight_net",   label: "Net Weight",   unit: "g", type: "number" },
+      { key: "weight_gross", unit: "g", type: "number" },
+      { key: "weight_net",   unit: "g", type: "number" },
     ],
   },
   {
     id: "attribute",
-    title: "Attribute",
     icon: "🏷️",
     color: "#8B5CF6",
     fields: [
-      { key: "attr_color",   label: "Color",   type: "text" },
-      { key: "attr_texture", label: "Texture", type: "text" },
-      { key: "attr_result",  label: "Result",  type: "select", options: ["Pass", "Fail", "Hold"] },
+      { key: "attr_color",   type: "text" },
+      { key: "attr_texture", type: "text" },
+      { key: "attr_result",  type: "select", options: ["Pass", "Fail", "Hold"] },
     ],
   },
   {
     id: "defect",
-    title: "Defect",
     icon: "⚠️",
     color: "#EF4444",
     fields: [
-      { key: "defect_type",  label: "Defect Type", type: "text" },
-      { key: "defect_qty",   label: "Qty",         type: "number" },
-      { key: "defect_note",  label: "Remark",      type: "text" },
+      { key: "defect_type", type: "text" },
+      { key: "defect_qty",  type: "number" },
+      { key: "defect_note", type: "text" },
     ],
   },
 ];
@@ -103,6 +95,7 @@ const SECTIONS: SectionDef[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function QualityPage() {
   const router = useRouter();
+  const { t }  = useI18n();
 
   const initValues = () =>
     SECTIONS.reduce<Record<string, string>>((acc, sec) => {
@@ -110,9 +103,9 @@ export default function QualityPage() {
       return acc;
     }, {});
 
-  const [values, setValues]       = useState<Record<string, string>>(initValues);
+  const [values, setValues]        = useState<Record<string, string>>(initValues);
   const [activeSection, setActive] = useState<string>(SECTIONS[0].id);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted]  = useState(false);
 
   const set = (key: string, val: string) =>
     setValues(prev => ({ ...prev, [key]: val }));
@@ -128,31 +121,27 @@ export default function QualityPage() {
   const activeSec = SECTIONS.find(s => s.id === activeSection)!;
 
   // ── progress ──
-  const total   = Object.keys(values).length;
-  const filled  = Object.values(values).filter(v => v !== "").length;
-  const pct     = Math.round((filled / total) * 100);
+  const total  = Object.keys(values).length;
+  const filled = Object.values(values).filter(v => v !== "").length;
+  const pct    = Math.round((filled / total) * 100);
 
   return (
-    <div
-      className="min-h-screen p-4 lg:p-8"
-      style={{ background: "var(--color-anu-void)" }}
-    >
+    <div className="min-h-screen p-4 lg:p-8" style={{ background: "var(--color-anu-void)" }}>
+
       {/* ── Header ── */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
           <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-            Quality Control
+            {t("quality.subtitle")}
           </p>
           <h1 className="text-2xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            QC Inspection Form
+            {t("quality.title")}
           </h1>
         </div>
 
         {/* Progress badge */}
-        <div
-          className="flex items-center gap-3 px-4 py-2 rounded-xl border"
-          style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}
-        >
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl border"
+             style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}>
           <div className="relative w-10 h-10">
             <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
               <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-anu-border)" strokeWidth="3" />
@@ -163,37 +152,33 @@ export default function QualityPage() {
                 strokeLinecap="round"
               />
             </svg>
-            <span
-              className="absolute inset-0 flex items-center justify-center text-xs font-bold"
-              style={{ color: "var(--color-anu-glow)" }}
-            >
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+                  style={{ color: "var(--color-anu-glow)" }}>
               {pct}%
             </span>
           </div>
           <div>
             <p className="text-xs font-semibold" style={{ color: "var(--color-anu-text)" }}>
-              {filled}/{total} fields
+              {filled}/{total} {t("quality.fields")}
             </p>
             <p className="text-xs" style={{ color: "var(--color-anu-muted)" }}>
-              completed
+              {t("quality.completed")}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── Body: Tab nav + Form ── */}
+      {/* ── Body ── */}
       <div className="flex flex-col lg:flex-row gap-4">
 
         {/* ── Left: Section tabs ── */}
-        <div
-          className="lg:w-52 shrink-0 rounded-2xl border p-3 flex flex-row lg:flex-col gap-1 overflow-x-auto"
-          style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}
-        >
+        <div className="lg:w-52 shrink-0 rounded-2xl border p-3 flex flex-row lg:flex-col gap-1 overflow-x-auto"
+             style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}>
           {SECTIONS.map(sec => {
-            const secFilled  = sec.fields.filter(f => values[f.key] !== "").length;
-            const secTotal   = sec.fields.length;
-            const isActive   = activeSection === sec.id;
-            const allDone    = secFilled === secTotal;
+            const secFilled = sec.fields.filter(f => values[f.key] !== "").length;
+            const secTotal  = sec.fields.length;
+            const isActive  = activeSection === sec.id;
+            const allDone   = secFilled === secTotal;
 
             return (
               <button
@@ -201,16 +186,14 @@ export default function QualityPage() {
                 onClick={() => setActive(sec.id)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all whitespace-nowrap lg:whitespace-normal"
                 style={{
-                  background:  isActive ? `${sec.color}22` : "transparent",
-                  color:       isActive ? sec.color : "var(--color-anu-muted)",
-                  borderLeft:  isActive ? `3px solid ${sec.color}` : "3px solid transparent",
+                  background: isActive ? `${sec.color}22` : "transparent",
+                  color:      isActive ? sec.color : "var(--color-anu-muted)",
+                  borderLeft: isActive ? `3px solid ${sec.color}` : "3px solid transparent",
                 }}
               >
                 <span className="text-base">{sec.icon}</span>
-                <span className="flex-1">{sec.title}</span>
-                {allDone && (
-                  <span className="text-green-400 text-xs">✓</span>
-                )}
+                <span className="flex-1">{t(`quality.sections.${sec.id}`)}</span>
+                {allDone && <span className="text-green-400 text-xs">✓</span>}
                 {!allDone && secFilled > 0 && (
                   <span className="text-xs" style={{ color: "var(--color-anu-muted)" }}>
                     {secFilled}/{secTotal}
@@ -223,25 +206,22 @@ export default function QualityPage() {
 
         {/* ── Right: Active section form ── */}
         <div className="flex-1">
-          <div
-            className="rounded-2xl border p-6"
-            style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}
-          >
+          <div className="rounded-2xl border p-6"
+               style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}>
+
             {/* Section header */}
             <div className="flex items-center gap-3 mb-6 pb-4"
                  style={{ borderBottom: "1px solid var(--color-anu-border)" }}>
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: `${activeSec.color}22` }}
-              >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                   style={{ background: `${activeSec.color}22` }}>
                 {activeSec.icon}
               </div>
               <div>
                 <h2 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>
-                  {activeSec.title}
+                  {t(`quality.sections.${activeSec.id}`)}
                 </h2>
                 <p className="text-xs" style={{ color: "var(--color-anu-muted)" }}>
-                  {activeSec.fields.filter(f => values[f.key] !== "").length}/{activeSec.fields.length} filled
+                  {activeSec.fields.filter(f => values[f.key] !== "").length}/{activeSec.fields.length} {t("quality.filled")}
                 </p>
               </div>
             </div>
@@ -250,11 +230,9 @@ export default function QualityPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {activeSec.fields.map(field => (
                 <div key={field.key} className="flex flex-col gap-1.5">
-                  <label
-                    className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: "var(--color-anu-muted)" }}
-                  >
-                    {field.label}
+                  <label className="text-xs font-semibold uppercase tracking-wide"
+                         style={{ color: "var(--color-anu-muted)" }}>
+                    {t(`quality.fields.${field.key}`)}
                     {field.unit && (
                       <span className="ml-1 font-normal normal-case" style={{ color: activeSec.color }}>
                         ({field.unit})
@@ -268,12 +246,12 @@ export default function QualityPage() {
                       onChange={e => set(field.key, e.target.value)}
                       className="px-3 py-2.5 rounded-lg text-sm outline-none transition"
                       style={{
-                        background:   "var(--color-anu-void)",
-                        border:       `1px solid ${values[field.key] ? activeSec.color : "var(--color-anu-border)"}`,
-                        color:        "var(--color-anu-text)",
+                        background: "var(--color-anu-void)",
+                        border:     `1px solid ${values[field.key] ? activeSec.color : "var(--color-anu-border)"}`,
+                        color:      "var(--color-anu-text)",
                       }}
                     >
-                      <option value="">— select —</option>
+                      <option value="">{t("quality.select")}</option>
                       {field.options?.map(o => (
                         <option key={o} value={o}>{o}</option>
                       ))}
@@ -283,12 +261,12 @@ export default function QualityPage() {
                       type={field.type ?? "text"}
                       value={values[field.key]}
                       onChange={e => set(field.key, e.target.value)}
-                      placeholder={field.unit ? `0.00` : `Enter ${field.label.toLowerCase()}`}
+                      placeholder={field.unit ? "0.00" : t(`quality.fields.${field.key}`).toLowerCase()}
                       className="px-3 py-2.5 rounded-lg text-sm outline-none transition"
                       style={{
-                        background:   "var(--color-anu-void)",
-                        border:       `1px solid ${values[field.key] ? activeSec.color : "var(--color-anu-border)"}`,
-                        color:        "var(--color-anu-text)",
+                        background: "var(--color-anu-void)",
+                        border:     `1px solid ${values[field.key] ? activeSec.color : "var(--color-anu-border)"}`,
+                        color:      "var(--color-anu-text)",
                       }}
                     />
                   )}
@@ -296,7 +274,7 @@ export default function QualityPage() {
               ))}
             </div>
 
-            {/* Section nav arrows */}
+            {/* Section nav */}
             <div className="flex justify-between mt-8 pt-4"
                  style={{ borderTop: "1px solid var(--color-anu-border)" }}>
               <button
@@ -307,24 +285,21 @@ export default function QualityPage() {
                 }}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-30"
                 style={{
-                  background:   "var(--color-anu-void)",
-                  border:       "1px solid var(--color-anu-border)",
-                  color:        "var(--color-anu-muted)",
+                  background: "var(--color-anu-void)",
+                  border:     "1px solid var(--color-anu-border)",
+                  color:      "var(--color-anu-muted)",
                 }}
               >
-                ← Previous
+                {t("quality.previous")}
               </button>
 
               {SECTIONS[SECTIONS.length - 1].id === activeSection ? (
                 <button
                   onClick={handleSubmit}
                   className="px-6 py-2 rounded-lg text-sm font-semibold transition"
-                  style={{
-                    background: submitted ? "#10B981" : "var(--color-anu-accent)",
-                    color: "#fff",
-                  }}
+                  style={{ background: submitted ? "#10B981" : "var(--color-anu-accent)", color: "#fff" }}
                 >
-                  {submitted ? "✓ Saved!" : "Submit Form"}
+                  {submitted ? t("quality.saved") : t("quality.submit")}
                 </button>
               ) : (
                 <button
@@ -333,12 +308,9 @@ export default function QualityPage() {
                     if (idx < SECTIONS.length - 1) setActive(SECTIONS[idx + 1].id);
                   }}
                   className="px-4 py-2 rounded-lg text-sm font-medium transition"
-                  style={{
-                    background: activeSec.color,
-                    color:      "#fff",
-                  }}
+                  style={{ background: activeSec.color, color: "#fff" }}
                 >
-                  Next →
+                  {t("quality.next")}
                 </button>
               )}
             </div>
@@ -350,12 +322,12 @@ export default function QualityPage() {
               onClick={handleReset}
               className="px-4 py-2 rounded-lg text-sm font-medium transition"
               style={{
-                background:   "transparent",
-                border:       "1px solid var(--color-anu-border)",
-                color:        "var(--color-anu-muted)",
+                background:  "transparent",
+                border:      "1px solid var(--color-anu-border)",
+                color:       "var(--color-anu-muted)",
               }}
             >
-              🔄 Reset all
+              {t("quality.reset_all")}
             </button>
 
             <button
@@ -366,7 +338,7 @@ export default function QualityPage() {
                 color:      "#fff",
               }}
             >
-              {submitted ? "✓ Saved!" : "💾 Save QC Form"}
+              {submitted ? t("quality.saved") : t("quality.save_form")}
             </button>
           </div>
         </div>

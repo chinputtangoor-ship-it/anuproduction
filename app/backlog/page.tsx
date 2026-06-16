@@ -3,30 +3,31 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 
 const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
 
 export default function BacklogPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [step, setStep] = useState<"line" | "batch" | "record">("line");
-  const [selLine, setSelLine] = useState("");
+  const router  = useRouter();
+  const { t }   = useI18n();
+  const [user, setUser]         = useState<any>(null);
+  const [step, setStep]         = useState<"line" | "batch" | "record">("line");
+  const [selLine, setSelLine]   = useState("");
   const [selBatch, setSelBatch] = useState("");
-  const [batches, setBatches] = useState<any[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [batches, setBatches]   = useState<any[]>([]);
+  const [saving, setSaving]     = useState(false);
   const [lastSaved, setLastSaved] = useState("");
 
-  const [curAts, setCurAts] = useState(0);
+  const [curAts, setCurAts]     = useState(0);
   const [curPrint, setCurPrint] = useState(0);
-  const [curCam, setCurCam] = useState(0);
+  const [curCam, setCurCam]     = useState(0);
 
-  // เปลี่ยนเป็น string เพื่อให้ช่องว่างได้
-  const [addAts, setAddAts] = useState("");
-  const [clearAts, setClearAts] = useState("");
-  const [addPrint, setAddPrint] = useState("");
+  const [addAts, setAddAts]       = useState("");
+  const [clearAts, setClearAts]   = useState("");
+  const [addPrint, setAddPrint]   = useState("");
   const [clearPrint, setClearPrint] = useState("");
-  const [addCam, setAddCam] = useState("");
-  const [clearCam, setClearCam] = useState("");
+  const [addCam, setAddCam]       = useState("");
+  const [clearCam, setClearCam]   = useState("");
 
   const finalAts   = curAts   + (parseInt(addAts)   || 0) - (parseInt(clearAts)   || 0);
   const finalPrint = curPrint + (parseInt(addPrint)  || 0) - (parseInt(clearPrint) || 0);
@@ -86,14 +87,14 @@ export default function BacklogPage() {
     setSaving(true);
     await supabase.from("backlog").insert([{
       time_stamp: new Date().toISOString(),
-      line: selLine,
-      batch: selBatch,
+      line:      selLine,
+      batch:     selBatch,
       ats_box:   finalAts,
       print_box: finalPrint,
       cam_box:   finalCam,
       record_by: user?.fullname,
     }]);
-    setLastSaved(`✅ Recording successful. — ATS: ${finalAts} | Print: ${finalPrint} | Cam: ${finalCam} box`);
+    setLastSaved(t("backlog.saved_msg", { ats: finalAts, print: finalPrint, cam: finalCam }));
     setCurAts(finalAts); setCurPrint(finalPrint); setCurCam(finalCam);
     setAddAts(""); setClearAts("");
     setAddPrint(""); setClearPrint("");
@@ -102,11 +103,18 @@ export default function BacklogPage() {
   }
 
   const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
+
   const STATIONS = [
     { label: "ATS",      color: "#7c5cff", cur: curAts,   add: addAts,   setAdd: setAddAts,   clear: clearAts,   setClear: setClearAts,   final: finalAts   },
     { label: "Printing", color: "#f97316", cur: curPrint, add: addPrint, setAdd: setAddPrint, clear: clearPrint, setClear: setClearPrint, final: finalPrint },
     { label: "Camera",   color: "#00d4aa", cur: curCam,   add: addCam,   setAdd: setAddCam,   clear: clearCam,   setClear: setClearCam,   final: finalCam   },
   ];
+
+  // back button label
+  const backLabel =
+    step === "line"   ? t("common.home") :
+    step === "batch"  ? t("common.change_line") :
+                        t("common.change_batch");
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -119,9 +127,11 @@ export default function BacklogPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
+            ← {backLabel}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>⏳ Backlog</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
+            ⏳ {t("backlog.title")}
+          </h1>
         </div>
 
         {/* Breadcrumb */}
@@ -135,7 +145,9 @@ export default function BacklogPage() {
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("common.select_line")}
+            </p>
             <div className="grid grid-cols-4 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => selectLine(l)}
@@ -151,9 +163,13 @@ export default function BacklogPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("common.select_batch")}
+            </p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>
+                  {t("backlog.no_batch", { line: selLine })}
+                </p>
               : <div className="grid grid-cols-2 gap-3">
                   {batches.map(b => (
                     <button key={b.batch} onClick={() => selectBatch(b.batch)}
@@ -175,7 +191,7 @@ export default function BacklogPage() {
             <div className="rounded-xl border p-4" style={cardStyle}>
               <p className="text-xs mb-3 font-medium uppercase tracking-wider"
                  style={{ color: "var(--color-anu-muted)" }}>
-                Current backlog
+                {t("backlog.current_backlog")}
               </p>
               <div className="grid grid-cols-3 gap-3">
                 {STATIONS.map(s => (
@@ -185,7 +201,9 @@ export default function BacklogPage() {
                     <p className="text-2xl font-black" style={{ color: "var(--color-anu-text)" }}>
                       {s.cur}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--color-anu-muted)" }}>box</p>
+                    <p className="text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("backlog.box")}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -202,31 +220,29 @@ export default function BacklogPage() {
                   <span className="ml-auto text-xs px-2 py-0.5 rounded-full"
                         style={{
                           background: s.final < 0 ? "rgba(255,71,87,0.15)" : "rgba(0,212,170,0.1)",
-                          color: s.final < 0 ? "var(--color-anu-danger)" : "var(--color-anu-success)",
+                          color:      s.final < 0 ? "var(--color-anu-danger)" : "var(--color-anu-success)",
                         }}>
-                    Result: {s.final} box
+                    {t("backlog.result")}: {s.final} {t("backlog.box")}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>📥 New backlog</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("backlog.new_backlog")}
+                    </p>
                     <input
-                      type="number"
-                      min="0"
-                      value={s.add}
-                      placeholder="0"
+                      type="number" min="0" value={s.add} placeholder="0"
                       onChange={e => s.setAdd(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-right"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                     />
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>📤 Cleared success</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("backlog.cleared")}
+                    </p>
                     <input
-                      type="number"
-                      min="0"
-                      value={s.clear}
-                      placeholder="0"
+                      type="number" min="0" value={s.clear} placeholder="0"
                       onChange={e => s.setClear(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-right"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
@@ -239,15 +255,21 @@ export default function BacklogPage() {
             {/* Total */}
             <div className="rounded-xl border p-4 flex justify-between items-center"
                  style={{ ...cardStyle, borderColor: hasError ? "rgba(255,71,87,0.4)" : "var(--color-anu-border)" }}>
-              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>Total Backlog</span>
+              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                {t("backlog.total_backlog")}
+              </span>
               <span className="text-2xl font-black"
                     style={{ color: hasError ? "var(--color-anu-danger)" : "var(--color-anu-text)" }}>
-                {hasError ? "❌ Negative value" : `${finalAts + finalPrint + finalCam} box`}
+                {hasError
+                  ? t("backlog.negative_error")
+                  : `${finalAts + finalPrint + finalCam} ${t("backlog.box")}`}
               </span>
             </div>
 
             {lastSaved && (
-              <p className="text-sm text-center" style={{ color: "var(--color-anu-success)" }}>{lastSaved}</p>
+              <p className="text-sm text-center" style={{ color: "var(--color-anu-success)" }}>
+                {lastSaved}
+              </p>
             )}
 
             {/* Buttons */}
@@ -255,7 +277,7 @@ export default function BacklogPage() {
               <button onClick={handleSave} disabled={saving || hasError}
                 className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                 style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                {saving ? "Recording..." : "💾 Save"}
+                {saving ? t("common.saving") : t("backlog.save")}
               </button>
             </div>
 

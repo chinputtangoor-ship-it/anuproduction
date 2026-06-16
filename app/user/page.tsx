@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 
 const ROLES = ["operator", "qc_technician", "production_operator", "warehouse_operator", "supervisor", "manager", "admin"];
 
@@ -24,15 +25,17 @@ function generateUsername(fullname: string): string {
 }
 
 export default function AccountPage() {
-  const router = useRouter();
-  const [user, setUser]           = useState<any>(null);
-  const [users, setUsers]         = useState<any[]>([]);
-  const [tab, setTab]             = useState<"add" | "manage">("add");
-  const [editingUser, setEditingUser] = useState<any>(null);
-  const [saving, setSaving]       = useState(false);
-  const [msg, setMsg]             = useState({ text: "", type: "" });
+  const router  = useRouter();
+  const { t }   = useI18n();
 
-  // ── Add form state ──
+  const [user, setUser]               = useState<any>(null);
+  const [users, setUsers]             = useState<any[]>([]);
+  const [tab, setTab]                 = useState<"add" | "manage">("add");
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [saving, setSaving]           = useState(false);
+  const [msg, setMsg]                 = useState({ text: "", type: "" });
+
+  // ── Add form ──
   const [fn, setFn]               = useState("");
   const [eid, setEid]             = useState("");
   const [role, setRole]           = useState("operator");
@@ -41,25 +44,17 @@ export default function AccountPage() {
   const [previewUn, setPreviewUn] = useState("");
   const [previewPw, setPreviewPw] = useState("");
 
-  // ── Edit form state ──
-  const [editFn, setEditFn]             = useState("");
-  const [editEid, setEditEid]           = useState("");
-  const [editUn, setEditUn]             = useState("");
-  const [editRole, setEditRole]         = useState("operator");
-  const [editBirthDate, setEditBirthDate] = useState("");
-  const [editJoinDate, setEditJoinDate]   = useState("");
+  // ── Edit form ──
+  const [editFn, setEditFn]                   = useState("");
+  const [editEid, setEditEid]                 = useState("");
+  const [editUn, setEditUn]                   = useState("");
+  const [editRole, setEditRole]               = useState("operator");
+  const [editBirthDate, setEditBirthDate]     = useState("");
+  const [editJoinDate, setEditJoinDate]       = useState("");
 
   const cardStyle  = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
-  const inputStyle = {
-    background:   "var(--color-anu-elevated)",
-    borderColor:  "var(--color-anu-border)",
-    color:        "var(--color-anu-text)",
-  };
-  // Date input needs extra style to fix browser default icon color in dark mode
-  const dateStyle  = {
-    ...inputStyle,
-    colorScheme: "dark" as const,
-  };
+  const inputStyle = { background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" };
+  const dateStyle  = { ...inputStyle, colorScheme: "dark" as const };
 
   useEffect(() => {
     const stored = localStorage.getItem("anu_user");
@@ -74,11 +69,8 @@ export default function AccountPage() {
   useEffect(() => { setPreviewPw(generatePassword()); }, []);
 
   async function loadUsers() {
-    const { data, error } = await supabase
-      .from("app_users")
-      .select("*")
-      .order("fullname");
-    if (error) { showMsg(`❌ Data loading failed.: ${error.message}`, "error"); return; }
+    const { data, error } = await supabase.from("app_users").select("*").order("fullname");
+    if (error) { showMsg(`❌ ${error.message}`, "error"); return; }
     setUsers(data || []);
   }
 
@@ -88,13 +80,13 @@ export default function AccountPage() {
   }
 
   async function handleAdd() {
-    if (!fn.trim()) { showMsg("⚠️ Please fill in the user information.", "error"); return; }
+    if (!fn.trim()) { showMsg(t("user.err_fill_info"), "error"); return; }
 
     const finalUn = previewUn || generateUsername(fn);
     const finalPw = previewPw || generatePassword();
 
     const dup = users.find(u => u.username === finalUn);
-    if (dup) { showMsg(`❌ Username "${finalUn}" This user is already in the system.`, "error"); return; }
+    if (dup) { showMsg(t("user.err_dup_username", { name: finalUn }), "error"); return; }
 
     setSaving(true);
     const { error } = await supabase.from("app_users").insert([{
@@ -108,10 +100,10 @@ export default function AccountPage() {
       first_login:   true,
     }]);
 
-    if (error) { showMsg(`❌ Saving failed.: ${error.message}`, "error"); setSaving(false); return; }
+    if (error) { showMsg(`❌ ${t("user.err_save_failed")}: ${error.message}`, "error"); setSaving(false); return; }
 
     await loadUsers();
-    showMsg(`✅ เพิ่มผู้ใช้ "${fn.trim()}" success  |  Username: ${finalUn}  |  Password: ${finalPw}`, "success");
+    showMsg(t("user.suc_add", { name: fn.trim(), username: finalUn, password: finalPw }), "success");
     setFn(""); setEid(""); setRole("operator");
     setBirthDate(""); setJoinDate("");
     setPreviewPw(generatePassword());
@@ -120,18 +112,18 @@ export default function AccountPage() {
 
   function startEdit(u: any) {
     setEditingUser(u);
-    setEditFn(u.fullname   ?? "");
-    setEditEid(u.emp_id    ?? "");
-    setEditUn(u.username   ?? "");
-    setEditRole(u.role     ?? "operator");
+    setEditFn(u.fullname      ?? "");
+    setEditEid(u.emp_id       ?? "");
+    setEditUn(u.username      ?? "");
+    setEditRole(u.role        ?? "operator");
     setEditBirthDate(u.birth_date ?? "");
     setEditJoinDate(u.join_date   ?? "");
   }
 
   async function handleSaveEdit() {
-    if (!editFn.trim() || !editUn.trim()) { showMsg("⚠️ The name and username cannot be empty.", "error"); return; }
+    if (!editFn.trim() || !editUn.trim()) { showMsg(t("user.err_empty_fields"), "error"); return; }
     const dup = users.find(u => u.username === editUn.trim() && u.id !== editingUser.id);
-    if (dup) { showMsg("❌ This username is already in use.", "error"); return; }
+    if (dup) { showMsg(t("user.err_dup_username_edit"), "error"); return; }
 
     setSaving(true);
     const { error } = await supabase.from("app_users").update({
@@ -143,25 +135,25 @@ export default function AccountPage() {
       join_date:  editJoinDate  || null,
     }).eq("id", editingUser.id);
 
-    if (error) { showMsg(`❌ Update failed.: ${error.message}`, "error"); setSaving(false); return; }
+    if (error) { showMsg(`❌ ${t("user.err_update_failed")}: ${error.message}`, "error"); setSaving(false); return; }
 
     await loadUsers();
-    showMsg("🎉 Data updated successfully.", "success");
+    showMsg(t("user.suc_update"), "success");
     setEditingUser(null);
     setSaving(false);
   }
 
   async function handleDelete(target: any) {
     if (target.role === "admin" || target.username === "admin") {
-      showMsg("❌ The Administrator account cannot be deleted.", "error"); return;
+      showMsg(t("user.err_delete_admin"), "error"); return;
     }
     if (target.username === user?.username) {
-      showMsg("❌ You cannot delete the currently active account.", "error"); return;
+      showMsg(t("user.err_delete_self"), "error"); return;
     }
     const { error } = await supabase.from("app_users").delete().eq("id", target.id);
-    if (error) { showMsg(`❌ Delete failed.: ${error.message}`, "error"); return; }
+    if (error) { showMsg(`❌ ${t("user.err_delete_failed")}: ${error.message}`, "error"); return; }
     await loadUsers();
-    showMsg(`🗑️ Delete user "${target.fullname}" finished`, "success");
+    showMsg(t("user.suc_delete", { name: target.fullname }), "success");
   }
 
   async function handleResetPassword(target: any) {
@@ -170,21 +162,18 @@ export default function AccountPage() {
       password_hash: newPw,
       first_login:   true,
     }).eq("id", target.id);
-    if (error) { showMsg(`❌ Reset failed.: ${error.message}`, "error"); return; }
+    if (error) { showMsg(`❌ ${t("user.err_reset_failed")}: ${error.message}`, "error"); return; }
     await loadUsers();
-    showMsg(`🔑 Reset password "${target.fullname}" success  |  New Password: ${newPw}`, "success");
+    showMsg(t("user.suc_reset_pw", { name: target.fullname, password: newPw }), "success");
   }
 
   // ── Reusable date field ──────────────────────────────────────────────────────
-  function DateField({
-    label, value, onChange,
-  }: { label: string; value: string; onChange: (v: string) => void }) {
+  function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
     return (
       <div>
         <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{label}</p>
         <input
-          type="date"
-          value={value}
+          type="date" value={value}
           onChange={e => onChange(e.target.value)}
           className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
           style={dateStyle}
@@ -193,23 +182,40 @@ export default function AccountPage() {
     );
   }
 
+  // ── Table headers ────────────────────────────────────────────────────────────
+  const TABLE_HEADERS = [
+    t("user.col_fullname"),
+    t("user.col_emp_id"),
+    t("user.col_username"),
+    t("user.col_position"),
+    t("user.col_birth"),
+    t("user.col_join"),
+    t("user.col_status"),
+    t("user.col_action"),
+  ];
+
+  // ── Date display ─────────────────────────────────────────────────────────────
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
       <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
 
+        {/* Page header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.push("/dashboard")}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← Home
+            ← {t("common.home")}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            👥 Account Management
+            👥 {t("user.title")}
           </h1>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {[["add", "➕ Add new user"], ["manage", "⚙️ Manage/Edit"]] .map(([key, label]) => (
+          {([["add", t("user.tab_add")], ["manage", t("user.tab_manage")]] as [string, string][]).map(([key, label]) => (
             <button key={key} onClick={() => { setTab(key as any); setEditingUser(null); }}
               className="px-4 py-2 rounded-lg text-sm font-medium transition"
               style={tab === key
@@ -232,63 +238,37 @@ export default function AccountPage() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════ TAB: ADD ══ */}
+        {/* ══ TAB: ADD ══ */}
         {tab === "add" && (
           <div className="rounded-xl border p-6" style={cardStyle}>
             <p className="text-sm font-semibold mb-4" style={{ color: "var(--color-anu-text)" }}>
-              📝 Fill in new user information.
+              {t("user.add_title")}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {/* Full name — spans 2 cols */}
               <div className="sm:col-span-2">
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Name-Surname *</p>
-                <input
-                  type="text" value={fn}
-                  onChange={e => setFn(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
-                  style={inputStyle}
-                />
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.fullname")}</p>
+                <input type="text" value={fn} onChange={e => setFn(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle} />
               </div>
 
-              {/* Employee ID */}
               <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Employee ID</p>
-                <input
-                  type="text" value={eid}
-                  onChange={e => setEid(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
-                  style={inputStyle}
-                />
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.emp_id")}</p>
+                <input type="text" value={eid} onChange={e => setEid(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle} />
               </div>
 
-              {/* Role */}
               <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Position</p>
-                <select
-                  value={role} onChange={e => setRole(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
-                  style={inputStyle}
-                >
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.position")}</p>
+                <select value={role} onChange={e => setRole(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
                   {ROLES.map(r => <option key={r}>{r}</option>)}
                 </select>
               </div>
 
-              {/* ── Date of Birth ── */}
-              <DateField
-                label="Date of Birth"
-                value={birthDate}
-                onChange={setBirthDate}
-              />
-
-              {/* ── Join to Company ── */}
-              <DateField
-                label="Join to Company"
-                value={joinDate}
-                onChange={setJoinDate}
-              />
-
+              <DateField label={t("user.birth_date")} value={birthDate} onChange={setBirthDate} />
+              <DateField label={t("user.join_date")}  value={joinDate}  onChange={setJoinDate}  />
             </div>
 
             {/* Auto-gen preview */}
@@ -297,131 +277,98 @@ export default function AccountPage() {
                    style={{ background: "var(--color-anu-elevated)", border: "1px solid var(--color-anu-border)" }}>
                 <p className="text-xs font-medium uppercase tracking-wider mb-1"
                    style={{ color: "var(--color-anu-muted)" }}>
-                  Data to be automatically generated.
+                  {t("user.auto_gen")}
                 </p>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs w-24" style={{ color: "var(--color-anu-muted)" }}>Username</span>
+                  <span className="text-xs w-24" style={{ color: "var(--color-anu-muted)" }}>{t("user.username")}</span>
                   <span className="text-sm font-bold font-mono px-3 py-1 rounded-lg"
                         style={{ background: "var(--color-anu-surface)", color: "var(--color-anu-glow)" }}>
                     {previewUn || "-"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs w-24" style={{ color: "var(--color-anu-muted)" }}>Password</span>
+                  <span className="text-xs w-24" style={{ color: "var(--color-anu-muted)" }}>{t("user.password")}</span>
                   <span className="text-sm font-bold font-mono px-3 py-1 rounded-lg"
                         style={{ background: "var(--color-anu-surface)", color: "var(--color-anu-warning)" }}>
                     {previewPw}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewPw(generatePassword())}
+                  <button type="button" onClick={() => setPreviewPw(generatePassword())}
                     className="text-xs px-2 py-1 rounded-lg border transition hover:opacity-80"
-                    style={{ borderColor: "var(--color-anu-border)", color: "var(--color-anu-muted)" }}
-                  >
-                    🔄 Random again.
+                    style={{ borderColor: "var(--color-anu-border)", color: "var(--color-anu-muted)" }}>
+                    {t("user.random_again")}
                   </button>
                 </div>
                 <p className="text-xs mt-1" style={{ color: "var(--color-anu-danger)" }}>
-                  ⚠️ Please save this Username and Password before clicking save, as they will not be displayed again.
+                  {t("user.pw_warning")}
                 </p>
               </div>
             )}
 
-            <button
-              onClick={handleAdd}
-              disabled={saving || !fn.trim()}
+            <button onClick={handleAdd} disabled={saving || !fn.trim()}
               className="mt-6 px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 transition hover:opacity-90"
-              style={{ background: "var(--color-anu-accent)", color: "#fff" }}
-            >
-              {saving ? "Recording..." : "💾 Save and create an account."}
+              style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
+              {saving ? t("user.saving") : t("user.save_account")}
             </button>
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════ TAB: MANAGE ══ */}
+        {/* ══ TAB: MANAGE ══ */}
         {tab === "manage" && (
           <div className="flex flex-col gap-4">
 
-            {/* ── Inline Edit form ── */}
+            {/* Inline edit form */}
             {editingUser && (
               <div className="rounded-xl border p-6 max-w-2xl"
                    style={{ ...cardStyle, borderColor: "var(--color-anu-glow)" }}>
                 <p className="text-sm font-semibold mb-4" style={{ color: "var(--color-anu-glow)" }}>
-                  ✏️ Edit information: {editingUser.fullname}
+                  {t("user.edit_title")}: {editingUser.fullname}
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                  {/* Text fields */}
                   {[
-                    { label: "Name-Surname *", value: editFn,  set: setEditFn  },
-                    { label: "Employee ID",    value: editEid, set: setEditEid },
-                    { label: "Username *",     value: editUn,  set: setEditUn  },
+                    { label: t("user.fullname"),  value: editFn,  set: setEditFn  },
+                    { label: t("user.emp_id"),     value: editEid, set: setEditEid },
+                    { label: t("user.username"),   value: editUn,  set: setEditUn  },
                   ].map(f => (
                     <div key={f.label}>
                       <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{f.label}</p>
-                      <input
-                        value={f.value}
-                        onChange={e => f.set(e.target.value)}
-                        className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
-                        style={inputStyle}
-                      />
+                      <input value={f.value} onChange={e => f.set(e.target.value)}
+                        className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle} />
                     </div>
                   ))}
 
-                  {/* Role */}
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Position</p>
-                    <select
-                      value={editRole} onChange={e => setEditRole(e.target.value)}
-                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
-                      style={inputStyle}
-                    >
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.position")}</p>
+                    <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
                       {ROLES.map(r => <option key={r}>{r}</option>)}
                     </select>
                   </div>
 
-                  {/* ── Date of Birth ── */}
-                  <DateField
-                    label="Date of Birth"
-                    value={editBirthDate}
-                    onChange={setEditBirthDate}
-                  />
-
-                  {/* ── Join to Company ── */}
-                  <DateField
-                    label="Join to Company"
-                    value={editJoinDate}
-                    onChange={setEditJoinDate}
-                  />
-
+                  <DateField label={t("user.birth_date")} value={editBirthDate} onChange={setEditBirthDate} />
+                  <DateField label={t("user.join_date")}  value={editJoinDate}  onChange={setEditJoinDate}  />
                 </div>
 
                 <div className="flex gap-3 mt-4">
-                  <button
-                    onClick={handleSaveEdit} disabled={saving}
+                  <button onClick={handleSaveEdit} disabled={saving}
                     className="px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
-                    style={{ background: "var(--color-anu-accent)", color: "#fff" }}
-                  >
-                    {saving ? "Recording..." : "💾 Save"}
+                    style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
+                    {saving ? t("user.saving") : t("user.save_edit")}
                   </button>
-                  <button
-                    onClick={() => setEditingUser(null)}
-                    className="px-6 py-2.5 rounded-lg text-sm border"
-                    style={cardStyle}
-                  >
-                    ❌ Cancel
+                  <button onClick={() => setEditingUser(null)}
+                    className="px-6 py-2.5 rounded-lg text-sm border" style={cardStyle}>
+                    {t("user.cancel_edit")}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* ── User table ── */}
+            {/* User table */}
             <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ background: "var(--color-anu-elevated)" }}>
-                    {["Name-Surname", "Employee ID", "Username", "Position", "Date of Birth", "Join Date", "Status", ""].map(h => (
+                    {TABLE_HEADERS.map(h => (
                       <th key={h} className="px-4 py-3 text-left font-medium"
                           style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
                         {h}
@@ -431,11 +378,10 @@ export default function AccountPage() {
                 </thead>
                 <tbody>
                   {users.map((u, i) => (
-                    <tr key={u.id}
-                        style={{
-                          background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)",
-                          borderTop: "1px solid var(--color-anu-border)",
-                        }}>
+                    <tr key={u.id} style={{
+                      background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)",
+                      borderTop: "1px solid var(--color-anu-border)",
+                    }}>
                       <td className="px-4 py-3 font-medium" style={{ color: "var(--color-anu-text)" }}>{u.fullname}</td>
                       <td className="px-4 py-3" style={{ color: "var(--color-anu-muted)" }}>{u.emp_id || "-"}</td>
                       <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--color-anu-muted)" }}>{u.username}</td>
@@ -455,45 +401,34 @@ export default function AccountPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
-                        {u.birth_date
-                          ? new Date(u.birth_date).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" })
-                          : "-"}
+                        {fmtDate(u.birth_date)}
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
-                        {u.join_date
-                          ? new Date(u.join_date).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" })
-                          : "-"}
+                        {fmtDate(u.join_date)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs"
                               style={{ color: u.first_login ? "var(--color-anu-warning)" : "var(--color-anu-success)" }}>
-                          {u.first_login ? "⚠️ Password has not been changed yet." : "✅ Normal"}
+                          {u.first_login ? t("user.status_first_login") : t("user.status_normal")}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 flex-wrap">
-                          <button
-                            onClick={() => startEdit(u)}
+                          <button onClick={() => startEdit(u)}
                             className="px-3 py-1.5 rounded-lg text-xs border transition hover:opacity-80"
-                            style={{ borderColor: "var(--color-anu-glow)", color: "var(--color-anu-glow)" }}
-                          >
-                            📝 Edit
+                            style={{ borderColor: "var(--color-anu-glow)", color: "var(--color-anu-glow)" }}>
+                            {t("user.btn_edit")}
                           </button>
-                          <button
-                            onClick={() => handleResetPassword(u)}
-                            disabled={u.role === "admin"}
+                          <button onClick={() => handleResetPassword(u)} disabled={u.role === "admin"}
                             className="px-3 py-1.5 rounded-lg text-xs border transition hover:opacity-80 disabled:opacity-30"
-                            style={{ borderColor: "var(--color-anu-warning)", color: "var(--color-anu-warning)" }}
-                          >
-                            🔑 Reset pw
+                            style={{ borderColor: "var(--color-anu-warning)", color: "var(--color-anu-warning)" }}>
+                            {t("user.btn_reset_pw")}
                           </button>
-                          <button
-                            onClick={() => handleDelete(u)}
+                          <button onClick={() => handleDelete(u)}
                             disabled={u.role === "admin" || u.username === user?.username}
                             className="px-3 py-1.5 rounded-lg text-xs border transition hover:opacity-80 disabled:opacity-30"
-                            style={{ borderColor: "var(--color-anu-danger)", color: "var(--color-anu-danger)" }}
-                          >
-                            🗑️ Delete
+                            style={{ borderColor: "var(--color-anu-danger)", color: "var(--color-anu-danger)" }}>
+                            {t("user.btn_delete")}
                           </button>
                         </div>
                       </td>
@@ -502,7 +437,7 @@ export default function AccountPage() {
                   {users.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>
-                        No information available.
+                        {t("user.no_data")}
                       </td>
                     </tr>
                   )}

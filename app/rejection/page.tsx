@@ -3,20 +3,22 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 
 const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
 
 export default function RejectionPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [step, setStep] = useState<"line" | "batch" | "record">("line");
-  const [selLine, setSelLine] = useState("");
+  const router  = useRouter();
+  const { t }   = useI18n();
+  const [user, setUser]         = useState<any>(null);
+  const [step, setStep]         = useState<"line" | "batch" | "record">("line");
+  const [selLine, setSelLine]   = useState("");
   const [selBatch, setSelBatch] = useState("");
-  const [batches, setBatches] = useState<any[]>([]);
-  const [atsKg, setAtsKg] = useState("");
-  const [printKg, setPrintKg] = useState("");
-  const [camKg, setCamKg] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [batches, setBatches]   = useState<any[]>([]);
+  const [atsKg, setAtsKg]       = useState("");
+  const [printKg, setPrintKg]   = useState("");
+  const [camKg, setCamKg]       = useState("");
+  const [saving, setSaving]     = useState(false);
   const [lastSaved, setLastSaved] = useState("");
 
   useEffect(() => {
@@ -42,9 +44,7 @@ export default function RejectionPage() {
 
   function selectBatch(batch: string) {
     setSelBatch(batch);
-    setAtsKg("");
-    setPrintKg("");
-    setCamKg("");
+    setAtsKg(""); setPrintKg(""); setCamKg("");
     setLastSaved("");
     setStep("record");
   }
@@ -63,15 +63,24 @@ export default function RejectionPage() {
       cam_kg:     camVal,
       check_by:   user?.fullname,
     }]);
-    setLastSaved(`✅ Recording success — ATS: ${atsVal} kg | Print: ${printVal} kg | Cam: ${camVal} kg`);
-    setAtsKg("");
-    setPrintKg("");
-    setCamKg("");
+    setLastSaved(t("rejection.saved_msg", { ats: atsVal, print: printVal, cam: camVal }));
+    setAtsKg(""); setPrintKg(""); setCamKg("");
     setSaving(false);
   }
 
   const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
   const total = (parseFloat(atsKg) || 0) + (parseFloat(printKg) || 0) + (parseFloat(camKg) || 0);
+
+  const backLabel =
+    step === "line"  ? t("common.home") :
+    step === "batch" ? t("common.change_line") :
+                       t("common.change_batch");
+
+  const STATIONS = [
+    { labelKey: "rejection.ats",      key: "ats",   value: atsKg,   set: setAtsKg,   color: "#7c5cff" },
+    { labelKey: "rejection.printing", key: "print", value: printKg, set: setPrintKg, color: "#f97316" },
+    { labelKey: "rejection.camera",   key: "cam",   value: camKg,   set: setCamKg,   color: "#00d4aa" },
+  ];
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -84,9 +93,11 @@ export default function RejectionPage() {
             else if (step === "batch") { setStep("line"); setSelLine(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "line" ? "Home" : step === "batch" ? "Change Line" : "Change Batch"}
+            ← {backLabel}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🗑️ Rejection Weight</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
+            🗑️ {t("rejection.title")}
+          </h1>
         </div>
 
         {/* Breadcrumb */}
@@ -100,7 +111,9 @@ export default function RejectionPage() {
         {/* STEP 1: Line */}
         {step === "line" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Select the Line</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("common.select_line")}
+            </p>
             <div className="grid grid-cols-4 gap-3">
               {LINES.map(l => (
                 <button key={l} onClick={() => selectLine(l)}
@@ -116,9 +129,13 @@ export default function RejectionPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("common.select_batch")}
+            </p>
             {batches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No batches currently running on {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>
+                  {t("rejection.no_batch", { line: selLine })}
+                </p>
               : <div className="grid grid-cols-2 gap-3">
                   {batches.map(b => (
                     <button key={b.batch} onClick={() => selectBatch(b.batch)}
@@ -136,24 +153,18 @@ export default function RejectionPage() {
         {step === "record" && (
           <div className="flex flex-col gap-4">
 
-            {/* 3 station inputs */}
-            {[
-              { label: "ATS Machine",     key: "ats",   value: atsKg,   set: setAtsKg,   color: "#7c5cff" },
-              { label: "Printing Machine", key: "print", value: printKg, set: setPrintKg, color: "#f97316" },
-              { label: "Camera Machine",  key: "cam",   value: camKg,   set: setCamKg,   color: "#00d4aa" },
-            ].map(s => (
+            {STATIONS.map(s => (
               <div key={s.key} className="rounded-xl border p-4" style={cardStyle}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-                  <p className="text-sm font-medium" style={{ color: "var(--color-anu-text)" }}>{s.label}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--color-anu-text)" }}>
+                    {t(s.labelKey)}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <input
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    value={s.value}
-                    placeholder="0.000"
+                    type="number" min="0" step="0.001"
+                    value={s.value} placeholder="0.000"
                     onChange={e => s.set(e.target.value)}
                     className="flex-1 rounded-lg border px-3 py-2.5 text-lg font-bold outline-none text-right"
                     style={{
@@ -170,26 +181,26 @@ export default function RejectionPage() {
             {/* Total */}
             <div className="rounded-xl border p-4 flex justify-between items-center"
                  style={{ ...cardStyle, borderColor: total > 0 ? "rgba(255,71,87,0.4)" : "var(--color-anu-border)" }}>
-              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>Total</span>
+              <span className="text-sm font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                {t("rejection.total")}
+              </span>
               <span className="text-2xl font-black"
                     style={{ color: total > 0 ? "var(--color-anu-danger)" : "var(--color-anu-muted)" }}>
                 {total.toFixed(3)} kg
               </span>
             </div>
 
-            {/* Last saved */}
             {lastSaved && (
               <p className="text-sm text-center" style={{ color: "var(--color-anu-success)" }}>
                 {lastSaved}
               </p>
             )}
 
-            {/* Buttons */}
             <div className="grid grid-cols-2 gap-3">
               <button onClick={handleSave} disabled={saving}
                 className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                 style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                {saving ? "Recording..." : "💾 Save"}
+                {saving ? t("common.saving") : t("rejection.save")}
               </button>
             </div>
 
