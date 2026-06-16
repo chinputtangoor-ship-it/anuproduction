@@ -161,7 +161,7 @@
       "defect":            "Defect"
     },
 
-    "fields": {
+    "field": {
       "dim_length":    "Length",
       "dim_width":     "Width",
       "dim_height":    "Height",

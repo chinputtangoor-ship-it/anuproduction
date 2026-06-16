@@ -161,7 +161,7 @@
       "defect":            "ข้อบกพร่อง"
     },
 
-    "fields": {
+    "field": {
       "dim_length":    "ความยาว",
       "dim_width":     "ความกว้าง",
       "dim_height":    "ความสูง",
