@@ -19,14 +19,16 @@ export default function DashboardPage() {
     {
       section: "Planner",
       roles: ["admin", "supervisor", "planner"],
-       items: [
+      items: [
         { label: "Plan", icon: "🗓️", href: "/plan" },
       ],
     },
     {
       section: "Quality",
       roles: ["admin", "supervisor", "qc_technician"],
-      items: [],
+      items: [
+        { label: "QC Form", icon: "🔍", href: "/quality" },
+      ],
     },
     {
       section: "Production",
@@ -51,10 +53,20 @@ export default function DashboardPage() {
       items: [],
     },
     {
+      section: "Human Resources",
+      roles: ["admin", "supervisor"],
+      items: [],
+    },
+    {
+      section: "Account",
+      roles: ["admin", "supervisor"],
+      items: [],
+    },
+    {
       section: "User",
       roles: ["admin"],
       items: [
-        { label: "Accounts", icon: "👥", href: "/account", roles: ["admin"] },
+        { label: "User Account", icon: "👥", href: "/user", roles: ["admin"] },
       ],
     },
   ];
@@ -96,7 +108,6 @@ export default function DashboardPage() {
 
           return (
             <div key={s.section}>
-              {/* Section Header */}
               <div className="flex items-center gap-3 mb-4">
                 <p
                   className="text-xs font-semibold uppercase tracking-widest"
@@ -110,7 +121,6 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {/* Items or Coming Soon */}
               {visibleItems.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                   {visibleItems.map((m) => (

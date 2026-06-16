@@ -30,7 +30,9 @@ const MENU: Section[] = [
     section: "Quality",
     icon: "🔍",
     roles: ["admin", "supervisor", "qc_technician"],
-    items: [],
+    items: [
+      { label: "QC Form", icon: "🔍", href: "/quality" },
+    ],
   },
   {
     section: "Production",
@@ -58,11 +60,23 @@ const MENU: Section[] = [
     items: [],
   },
   {
+    section: "Human Resources",
+    icon: "🧑",
+    roles: ["admin", "supervisor"],
+    items: [],
+  },
+  {
+    section: "Account",
+    icon: "💰",
+    roles: ["admin", "supervisor"],
+    items: [],
+  },
+  {
     section: "User",
     icon: "👥",
     roles: ["admin"],
     items: [
-      { label: "Accounts", icon: "👥", href: "/account", roles: ["admin"] },
+      { label: "User Account", icon: "👥", href: "/user", roles: ["admin"] },
     ],
   },
 ];
@@ -71,7 +85,6 @@ export function Sidebar({ role }: { role: string }) {
   const pathname = usePathname();
   const router   = useRouter();
 
-  // เปิด section ที่มี active page อยู่ตั้งแต่แรก
   const initialOpen = MENU.reduce<Record<string, boolean>>((acc, s) => {
     const hasActive = s.items.some(m => m.href === pathname);
     acc[s.section] = hasActive;
@@ -122,7 +135,6 @@ export function Sidebar({ role }: { role: string }) {
 
           return (
             <div key={s.section}>
-              {/* Section header — กดเพื่อ toggle */}
               <button
                 onClick={() => toggle(s.section)}
                 className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition"
@@ -148,7 +160,6 @@ export function Sidebar({ role }: { role: string }) {
                 </span>
               </button>
 
-              {/* Sub-items */}
               {isOpen && (
                 <div className="flex flex-col gap-0.5 mt-0.5 mb-1 ml-3 pl-3"
                      style={{ borderLeft: "1px solid var(--color-anu-border)" }}>
