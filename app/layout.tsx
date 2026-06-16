@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { Sidebar } from "@/components/Sidebar";
+import { I18nProvider } from "@/lib/i18n/context";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -12,8 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="th" className="dark">
       <body className={inter.className}>
-        <GlobalHeader />
-        <AppBody>{children}</AppBody>
+        <I18nProvider>
+          <GlobalHeader />
+          <AppBody>{children}</AppBody>
+        </I18nProvider>
       </body>
     </html>
   );

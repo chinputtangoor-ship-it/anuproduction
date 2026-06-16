@@ -2,10 +2,13 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/pages/Logo";
+import { LangToggle } from "@/lib/i18n/LangToggle";
+import { useI18n } from "@/lib/i18n/context";
 
 export function GlobalHeader() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { t }    = useI18n();
 
   if (pathname === "/login") return null;
 
@@ -36,10 +39,14 @@ export function GlobalHeader() {
                 style={{ background:"var(--color-anu-success)" }} />
           Live
         </span>
+
+        {/* ปุ่มสลับภาษา */}
+        <LangToggle />
+
         <button onClick={() => { localStorage.removeItem("anu_user"); router.push("/login"); }}
                 className="text-xs px-3 py-1.5 rounded-lg border transition hover:opacity-80"
                 style={{ borderColor:"var(--color-anu-border)", color:"var(--color-anu-muted)" }}>
-          ออกจากระบบ
+          {t("common.logout")}
         </button>
       </div>
     </header>
