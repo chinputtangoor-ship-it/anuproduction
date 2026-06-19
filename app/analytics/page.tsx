@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer,
@@ -29,7 +30,7 @@ const TOOLTIP_STYLE = {
 const DEFECT_COLORS = [DANGER,"#ff6b81",WARNING,BLUE,SUCCESS,"#9b59b6","#e67e22","#f1c40f","#2ecc71","#3498db"];
 const STATUS_COLORS: Record<string, string> = {
   AF: SUCCESS, Sort: WARNING, PS: "#f97316",
-  HP: BLUE, HUP: "#6366f1", HFX: "#a855f7", Scrap: DANGER
+  HP: BLUE, HUP: "#6366f1", HFX: "#a855f7", Scrap: DANGER,
 };
 
 function kpiColor(val: number, good: number, warn: number, reverse = false) {
@@ -65,24 +66,26 @@ function passColor(v: number | null) {
 
 export default function AnalyticsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState(0);
-  const [filterLine, setFilterLine] = useState("All");
+  const { t }  = useI18n();
+
+  const [activeTab, setActiveTab]     = useState(0);
+  const [filterLine, setFilterLine]   = useState("All");
   const [filterPeriod, setFilterPeriod] = useState("Today");
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const [useCustom, setUseCustom] = useState(false);
-  const [customStart, setCustomStart] = useState(todayStr);
-  const [customEnd,   setCustomEnd]   = useState(todayStr);
+  const [useCustom, setUseCustom]         = useState(false);
+  const [customStart, setCustomStart]     = useState(todayStr);
+  const [customEnd, setCustomEnd]         = useState(todayStr);
   const [customStartTime, setCustomStartTime] = useState("07:00");
-  const [customEndTime,   setCustomEndTime]   = useState("19:00");
+  const [customEndTime, setCustomEndTime]     = useState("19:00");
 
-  const [plans,     setPlans]     = useState<any[]>([]);
-  const [boxes,     setBoxes]     = useState<any[]>([]);
-  const [backlog,   setBacklog]   = useState<any[]>([]);
+  const [plans, setPlans]         = useState<any[]>([]);
+  const [boxes, setBoxes]         = useState<any[]>([]);
+  const [backlog, setBacklog]     = useState<any[]>([]);
   const [rejection, setRejection] = useState<any[]>([]);
-  const [camera,    setCamera]    = useState<any[]>([]);
-  const [repass,    setRepass]    = useState<any[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [camera, setCamera]       = useState<any[]>([]);
+  const [repass, setRepass]       = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
     const stored = localStorage.getItem("anu_user");
@@ -152,7 +155,6 @@ export default function AnalyticsPage() {
   const fBacklog = applyFilter(backlog,   "line");
   const fPlans   = filterLine === "All" ? plans : plans.filter(p => p.line === filterLine);
 
-  // ── จุดที่ 1: Running plans ไม่ขึ้นกับ filter เวลา ──
   const runningPlans = plans.filter(p => p.batch_status === "Running");
   const runningPlansFiltered = filterLine === "All"
     ? runningPlans
@@ -195,7 +197,6 @@ export default function AnalyticsPage() {
     return { line: ln, af, tot, scr, tgt, yld, rejKg, bl, batches };
   });
 
-  // Progress running batch
   const progressData = ALL_LINES
     .map(ln => {
       const tgt     = runningPlansFiltered.filter(p => p.line === ln).reduce((s, p) => s + (p.need_af_box || 0), 0);
@@ -206,7 +207,6 @@ export default function AnalyticsPage() {
     })
     .filter(s => s.target > 0);
 
-  // ── Pareto จากกล่องที่ยังไม่ AF
   const latestBoxMap: Record<string, any> = {};
   boxes.forEach(b => {
     const key = `${b.batch}__${b.box_number}`;
@@ -289,12 +289,26 @@ export default function AnalyticsPage() {
 
   const cardStyle = { background: SURFACE, borderColor: BORDER };
   const lineOptions = ["All", ...ALL_LINES];
-  const periodOptions = ["All", "Today", "Day shift (07-19)", "Night shift (19-07)", "Last 7 days", "Last 30 days"];
-  const tabs = ["📊 Overview & Progress", "🔬 Quality Analysis", "📋 Detail & Pending"];
+
+  // ── Period options with translated labels, value stays in English for filter logic ──
+  const PERIOD_OPTIONS = [
+    { value: "All",                      labelKey: "analytics.period_all" },
+    { value: "Today",                    labelKey: "analytics.period_today" },
+    { value: "Day shift (07-19)",        labelKey: "analytics.period_day_shift" },
+    { value: "Night shift (19-07)",      labelKey: "analytics.period_night_shift" },
+    { value: "Last 7 days",              labelKey: "analytics.period_7days" },
+    { value: "Last 30 days",             labelKey: "analytics.period_30days" },
+  ];
+
+  const TABS = [
+    t("analytics.tab_overview"),
+    t("analytics.tab_quality"),
+    t("analytics.tab_detail"),
+  ];
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--color-anu-void)" }}>
-      <p style={{ color: MUTED }}>Loading data...</p>
+      <p style={{ color: MUTED }}>{t("analytics.loading_data")}</p>
     </div>
   );
 
@@ -304,10 +318,10 @@ export default function AnalyticsPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-black tracking-wide" style={{ color: TEXT }}>
-            📈 Executive Production Dashboard
+            📈 {t("analytics.title")}
           </h1>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
-            Monitoring 13 production lines · Last updated: {new Date().toLocaleString("th-TH")}
+            {t("analytics.monitoring")}: {new Date().toLocaleString("th-TH")}
           </p>
         </div>
 
@@ -315,16 +329,16 @@ export default function AnalyticsPage() {
         <div className="rounded-xl border p-4 mb-6 flex flex-wrap gap-4 items-end"
              style={{ background: "#0a0c12", borderColor: BORDER }}>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: MUTED }}>🏭 Line</span>
+            <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_line")}</span>
             <select value={filterLine} onChange={e => setFilterLine(e.target.value)}
               className="rounded-lg border px-3 py-1.5 text-sm outline-none"
               style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }}>
-              {lineOptions.map(l => <option key={l}>{l}</option>)}
+              {lineOptions.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: MUTED }}>📅 Period</span>
+            <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_period")}</span>
             <select
               value={useCustom ? "custom" : filterPeriod}
               onChange={e => {
@@ -333,21 +347,21 @@ export default function AnalyticsPage() {
               }}
               className="rounded-lg border px-3 py-1.5 text-sm outline-none"
               style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }}>
-              {periodOptions.map(p => <option key={p}>{p}</option>)}
-              <option value="custom">🗓️ Custom</option>
+              {PERIOD_OPTIONS.map(p => <option key={p.value} value={p.value}>{t(p.labelKey)}</option>)}
+              <option value="custom">{t("analytics.filter_custom")}</option>
             </select>
           </div>
 
           {useCustom && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs" style={{ color: MUTED }}>From</span>
+              <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_from")}</span>
               <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
                 className="rounded-lg border px-2 py-1.5 text-xs outline-none"
                 style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
               <input type="time" value={customStartTime} onChange={e => setCustomStartTime(e.target.value)}
                 className="rounded-lg border px-2 py-1.5 text-xs outline-none"
                 style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
-              <span className="text-xs" style={{ color: MUTED }}>To</span>
+              <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_to")}</span>
               <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
                 className="rounded-lg border px-2 py-1.5 text-xs outline-none"
                 style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
@@ -358,24 +372,24 @@ export default function AnalyticsPage() {
           )}
 
           <span className="ml-auto text-xs" style={{ color: MUTED }}>
-            Box Status: {fBoxes.length.toLocaleString()} List
+            {t("analytics.box_status_list", { count: fBoxes.length.toLocaleString() })}
           </span>
           <button onClick={loadAll}
             className="text-xs px-3 py-1.5 rounded-lg border transition hover:opacity-80"
             style={{ borderColor: ACCENT, color: ACCENT }}>
-            🔄 Refresh
+            {t("analytics.refresh")}
           </button>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
-          {tabs.map((t, i) => (
+          {TABS.map((tabLabel, i) => (
             <button key={i} onClick={() => setActiveTab(i)}
               className="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition"
               style={activeTab === i
                 ? { background: ACCENT, color: "#fff" }
                 : { ...cardStyle, border: `1px solid ${BORDER}`, color: MUTED }}>
-              {t}
+              {tabLabel}
             </button>
           ))}
         </div>
@@ -383,21 +397,53 @@ export default function AnalyticsPage() {
         {/* TAB 1 */}
         {activeTab === 0 && (
           <div className="flex flex-col gap-6">
-            <SectionHeader>Q1 — Executive KPIs</SectionHeader>
+            <SectionHeader>{t("analytics.q1_title")}</SectionHeader>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <KpiCard label="Yield Rate"    value={`${yieldPct.toFixed(1)}%`}       sub="AF / Target"                         color={kpiColor(yieldPct, 90, 70)} />
-              <KpiCard label="Good Boxes"    value={totalAF.toLocaleString()}         sub={`From ${totalTarget.toLocaleString()} Target`} color={SUCCESS} />
-              <KpiCard label="Scrap Rate"    value={`${scrapPct.toFixed(1)}%`}        sub={`${totalNonAF} Scrap box`}          color={kpiColor(scrapPct, 2, 5, true)} />
-              <KpiCard label="Active Lines"  value={`${activeLines}/13`}              sub="Line with data"                     color={BLUE} />
-              <KpiCard label="Backlog"       value={latestBacklog.toLocaleString()}   sub="Backlog"                            color={kpiColor(latestBacklog, 0, 5, true)} />
-              <KpiCard label="Re-pass Total" value={fRepass.length.toLocaleString()}  sub="Re-pass box"                        color={WARNING} />
+              <KpiCard
+                label={t("analytics.kpi_yield")}
+                value={`${yieldPct.toFixed(1)}%`}
+                sub={t("analytics.kpi_yield_sub")}
+                color={kpiColor(yieldPct, 90, 70)}
+              />
+              <KpiCard
+                label={t("analytics.kpi_good_boxes")}
+                value={totalAF.toLocaleString()}
+                sub={t("analytics.kpi_good_boxes_sub", { target: totalTarget.toLocaleString() })}
+                color={SUCCESS}
+              />
+              <KpiCard
+                label={t("analytics.kpi_scrap")}
+                value={`${scrapPct.toFixed(1)}%`}
+                sub={t("analytics.kpi_scrap_sub", { count: totalNonAF })}
+                color={kpiColor(scrapPct, 2, 5, true)}
+              />
+              <KpiCard
+                label={t("analytics.kpi_active_lines")}
+                value={`${activeLines}/13`}
+                sub={t("analytics.kpi_active_lines_sub")}
+                color={BLUE}
+              />
+              <KpiCard
+                label={t("analytics.kpi_backlog")}
+                value={latestBacklog.toLocaleString()}
+                sub={t("analytics.kpi_backlog_sub")}
+                color={kpiColor(latestBacklog, 0, 5, true)}
+              />
+              <KpiCard
+                label={t("analytics.kpi_repass")}
+                value={fRepass.length.toLocaleString()}
+                sub={t("analytics.kpi_repass_sub")}
+                color={WARNING}
+              />
             </div>
 
-            <SectionHeader>Q2 — Line Status Matrix & Production Progress</SectionHeader>
+            <SectionHeader>{t("analytics.q2_title")}</SectionHeader>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
               <div>
-                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>🟢 Status of 13 production lines.</p>
+                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>
+                  {t("analytics.status_13_lines")}
+                </p>
                 <div className="grid grid-cols-3 gap-2">
                   {ALL_LINES.map(ln => {
                     const s = lineStats.find(x => x.line === ln)!;
@@ -416,7 +462,7 @@ export default function AnalyticsPage() {
                             {s.batches && <p className="text-xs truncate mt-0.5" style={{ color: MUTED }}>{s.batches.slice(0, 18)}</p>}
                           </>
                         ) : (
-                          <p className="text-xs" style={{ color: MUTED }}>No information available.</p>
+                          <p className="text-xs" style={{ color: MUTED }}>{t("analytics.no_line_data")}</p>
                         )}
                       </div>
                     );
@@ -425,8 +471,10 @@ export default function AnalyticsPage() {
               </div>
 
               <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>📊 Production Progress % by Line</p>
-                <p className="text-xs mb-3" style={{ color: MUTED }}>Running Batch · AF Box</p>
+                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
+                  {t("analytics.progress_title")}
+                </p>
+                <p className="text-xs mb-3" style={{ color: MUTED }}>{t("analytics.progress_sub")}</p>
                 {progressData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={360}>
                     <BarChart data={progressData} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
@@ -436,7 +484,7 @@ export default function AnalyticsPage() {
                       <Tooltip
                         {...TOOLTIP_STYLE}
                         formatter={(v: any, _: any, p: any) => [
-                          `${v}% (AF: ${p.payload.af} / ${p.payload.target}) · ${p.payload.batch}`, "Progress"
+                          `${v}% (AF: ${p.payload.af} / ${p.payload.target}) · ${p.payload.batch}`, t("analytics.progress_tooltip")
                         ]}
                       />
                       <Bar dataKey="pct" radius={[4, 4, 0, 0]}
@@ -447,7 +495,7 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="rounded-xl border p-8 text-center" style={cardStyle}>
-                    <p style={{ color: MUTED }}>No batches currently running.</p>
+                    <p style={{ color: MUTED }}>{t("analytics.no_running_batch")}</p>
                   </div>
                 )}
               </div>
@@ -458,13 +506,15 @@ export default function AnalyticsPage() {
         {/* TAB 2 */}
         {activeTab === 1 && (
           <div className="flex flex-col gap-6">
-            <SectionHeader>Q3 — Scrap Pareto & Camera Performance</SectionHeader>
+            <SectionHeader>{t("analytics.q3_title")}</SectionHeader>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
               <div className="rounded-xl border p-5" style={cardStyle}>
-                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>🔴 Scrap / Defect Pareto</p>
+                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
+                  {t("analytics.pareto_title")}
+                </p>
                 <p className="text-xs mb-4" style={{ color: MUTED }}>
-                  Non-AF boxes not cleared. · {pendingBoxes.length} Box
+                  {t("analytics.pareto_sub", { count: pendingBoxes.length })}
                 </p>
                 {paretoData.length > 0 ? (
                   <>
@@ -504,19 +554,23 @@ export default function AnalyticsPage() {
                              style={{ borderColor: [DANGER, WARNING, BLUE][i] + "60", background: ELEVATED }}>
                           <p className="text-lg font-black" style={{ color: [DANGER, WARNING, BLUE][i] }}>#{i + 1}</p>
                           <p className="text-xs font-bold mt-1" style={{ color: TEXT }}>{d.name}</p>
-                          <p className="text-xs" style={{ color: "#94a3b8" }}>{d.count} ครั้ง ({(d.count / paretoTotal * 100).toFixed(1)}%)</p>
+                          <p className="text-xs" style={{ color: "#94a3b8" }}>
+                            {d.count} {t("analytics.times")} ({(d.count / paretoTotal * 100).toFixed(1)}%)
+                          </p>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <p style={{ color: SUCCESS }}>🟢 No Non-AF in the system.</p>
+                  <p style={{ color: SUCCESS }}>{t("analytics.no_nonaf")}</p>
                 )}
               </div>
 
               <div className="flex flex-col gap-4">
                 <div className="rounded-xl border p-5" style={cardStyle}>
-                  <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>📷 Camera Pass Rate by Line</p>
+                  <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>
+                    {t("analytics.cam_pass_title")}
+                  </p>
                   {camBarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={camBarData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }} barCategoryGap="20%">
@@ -530,12 +584,14 @@ export default function AnalyticsPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p style={{ color: MUTED }}>No information of Camera</p>
+                    <p style={{ color: MUTED }}>{t("analytics.no_camera_data")}</p>
                   )}
                 </div>
 
                 <div className="rounded-xl border p-4" style={cardStyle}>
-                  <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>📋 Camera Detail Table</p>
+                  <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>
+                    {t("analytics.cam_detail_title")}
+                  </p>
                   {camTableData.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
@@ -569,7 +625,7 @@ export default function AnalyticsPage() {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-xs" style={{ color: MUTED }}>No information of Camera</p>
+                    <p className="text-xs" style={{ color: MUTED }}>{t("analytics.no_camera_data")}</p>
                   )}
                 </div>
               </div>
@@ -580,11 +636,13 @@ export default function AnalyticsPage() {
         {/* TAB 3 */}
         {activeTab === 2 && (
           <div className="flex flex-col gap-6">
-            <SectionHeader>📋 Detail Line-by-Line Breakdown & Pending Work</SectionHeader>
+            <SectionHeader>{t("analytics.detail_title")}</SectionHeader>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <div className="xl:col-span-2">
-                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>📊 Summarize production line.</p>
+                <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>
+                  {t("analytics.summary_line_title")}
+                </p>
                 <div className="overflow-x-auto rounded-xl border" style={{ borderColor: BORDER }}>
                   <table className="w-full text-xs">
                     <thead>
@@ -615,7 +673,7 @@ export default function AnalyticsPage() {
                         </tr>
                       ))}
                       {lineStats.filter(s => s.tot > 0).length === 0 && (
-                        <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: MUTED }}>ไม่มีข้อมูล</td></tr>
+                        <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: MUTED }}>{t("analytics.no_data")}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -624,7 +682,9 @@ export default function AnalyticsPage() {
 
               <div className="flex flex-col gap-4">
                 <div className="rounded-xl border p-4" style={cardStyle}>
-                  <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>⏳ Backlog by Line</p>
+                  <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>
+                    {t("analytics.backlog_by_line")}
+                  </p>
                   {lineStats.filter(s => s.bl > 0).length > 0 ? (
                     <ResponsiveContainer width="100%" height={150}>
                       <BarChart
@@ -646,17 +706,19 @@ export default function AnalyticsPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p className="text-center py-4 text-sm" style={{ color: SUCCESS }}>🟢 No pending work.</p>
+                    <p className="text-center py-4 text-sm" style={{ color: SUCCESS }}>{t("analytics.no_pending_work")}</p>
                   )}
                 </div>
 
                 <div className="rounded-xl border p-4" style={cardStyle}>
-                  <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>🔄 Re-pass Summary</p>
+                  <p className="text-sm font-semibold mb-3" style={{ color: TEXT }}>
+                    {t("analytics.repass_summary")}
+                  </p>
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {[
-                      { label: "All", value: rpTotal,                      color: TEXT },
-                      { label: "Success",  value: rpSuccess,                     color: SUCCESS },
-                      { label: "Rate",    value: `${rpRate.toFixed(1)}%`,        color: kpiColor(rpRate, 80, 60) },
+                      { label: t("analytics.repass_all"),     value: rpTotal,               color: TEXT },
+                      { label: t("analytics.repass_success"), value: rpSuccess,             color: SUCCESS },
+                      { label: t("analytics.repass_rate"),    value: `${rpRate.toFixed(1)}%`, color: kpiColor(rpRate, 80, 60) },
                     ].map(k => (
                       <div key={k.label} className="rounded-lg border p-2 text-center"
                            style={{ background: ELEVATED, borderColor: BORDER }}>
@@ -685,12 +747,12 @@ export default function AnalyticsPage() {
             </div>
 
             <div>
-              <SectionHeader>⚠️ Box awaiting Re-pass (Non-AF)</SectionHeader>
+              <SectionHeader>{t("analytics.pending_section")}</SectionHeader>
               {pendingBoxes.length > 0 ? (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                   <div className="xl:col-span-2 overflow-x-auto rounded-xl border" style={{ borderColor: BORDER }}>
                     <p className="px-4 py-3 text-sm" style={{ color: MUTED, borderBottom: `1px solid ${BORDER}` }}>
-                      Pending <span style={{ color: DANGER, fontWeight: 700 }}>{pendingBoxes.length}</span> awaiting processing
+                      {t("analytics.pending_count")} <span style={{ color: DANGER, fontWeight: 700 }}>{pendingBoxes.length}</span> {t("analytics.pending_awaiting")}
                     </p>
                     <table className="w-full text-xs">
                       <thead>
@@ -723,7 +785,7 @@ export default function AnalyticsPage() {
 
                   <div className="rounded-xl border p-5" style={cardStyle}>
                     <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>
-                      {pendingPieData.length > 0 ? "Defect of Non-AF" : "Status of Non-AF"}
+                      {pendingPieData.length > 0 ? t("analytics.defect_of_nonaf") : t("analytics.status_of_nonaf")}
                     </p>
                     <ResponsiveContainer width="100%" height={260}>
                       <PieChart>
@@ -755,7 +817,7 @@ export default function AnalyticsPage() {
                 </div>
               ) : (
                 <div className="rounded-xl border p-6 text-center" style={cardStyle}>
-                  <p style={{ color: SUCCESS }}>🟢 No pending work.</p>
+                  <p style={{ color: SUCCESS }}>{t("analytics.no_pending")}</p>
                 </div>
               )}
             </div>
@@ -763,7 +825,7 @@ export default function AnalyticsPage() {
         )}
 
         <p className="text-center text-xs mt-8" style={{ color: "#2a3550" }}>
-          📊 Latest processing: {new Date().toLocaleString("th-TH")} · Production Tracking System
+          {t("analytics.footer_updated")}: {new Date().toLocaleString("th-TH")} · Production Tracking System
         </p>
       </div>
     </div>

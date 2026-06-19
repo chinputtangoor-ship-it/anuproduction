@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 
 const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"];
 const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
@@ -10,26 +11,28 @@ const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2
 
 export default function RepassPage() {
   const router = useRouter();
+  const { t }  = useI18n();
+
   const [user, setUser] = useState<any>(null);
   const [step, setStep] = useState<"line" | "batch" | "box" | "record" | "view">("line");
 
-  const [activeLines, setActiveLines] = useState<string[]>([]);
+  const [activeLines, setActiveLines]     = useState<string[]>([]);
   const [activeBatches, setActiveBatches] = useState<string[]>([]);
-  const [nonAfBoxes, setNonAfBoxes] = useState<any[]>([]);
+  const [nonAfBoxes, setNonAfBoxes]       = useState<any[]>([]);
 
-  const [selLine, setSelLine] = useState("");
+  const [selLine, setSelLine]   = useState("");
   const [selBatch, setSelBatch] = useState("");
-  const [selBox, setSelBox] = useState<any>(null);
-  const [isOther, setIsOther] = useState(false);
+  const [selBox, setSelBox]     = useState<any>(null);
+  const [isOther, setIsOther]   = useState(false);
 
-  const [otherLine, setOtherLine] = useState(LINES[0]);
-  const [otherBatch, setOtherBatch] = useState("");
+  const [otherLine, setOtherLine]     = useState(LINES[0]);
+  const [otherBatch, setOtherBatch]   = useState("");
   const [otherBoxNum, setOtherBoxNum] = useState("");
 
-  const [mode, setMode] = useState<"Online" | "Offline">("Online");
+  const [mode, setMode]                 = useState<"Online" | "Offline">("Online");
   const [resultStatus, setResultStatus] = useState("AF");
-  const [newDefects, setNewDefects] = useState<string[]>([]);
-  const [reason, setReason] = useState("");
+  const [newDefects, setNewDefects]     = useState<string[]>([]);
+  const [reason, setReason]             = useState("");
 
   const now = new Date();
   const roundedMin = Math.floor(now.getMinutes() / 15) * 15;
@@ -37,13 +40,13 @@ export default function RepassPage() {
 
   const [startDate, setStartDate] = useState(now.toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState(defaultTime);
-  const [endDate, setEndDate] = useState(now.toISOString().slice(0, 10));
-  const [endTime, setEndTime] = useState("");
+  const [endDate, setEndDate]     = useState(now.toISOString().slice(0, 10));
+  const [endTime, setEndTime]     = useState("");
 
-  const [saving, setSaving] = useState(false);
-  const [viewData, setViewData] = useState<any[]>([]);
+  const [saving, setSaving]         = useState(false);
+  const [viewData, setViewData]     = useState<any[]>([]);
   const [viewLoading, setViewLoading] = useState(false);
-  const [viewPeriod, setViewPeriod] = useState("All");
+  const [viewPeriod, setViewPeriod] = useState<"All" | "Today" | "Last 7 days">("All");
 
   const needDefect = !["AF", "HP", "HUP"].includes(resultStatus);
   const timeOptions = Array.from({ length: 96 }, (_, i) => {
@@ -56,7 +59,7 @@ export default function RepassPage() {
   const STATUS_COLORS: Record<string, string> = {
     AF: "var(--color-anu-success)", Sort: "var(--color-anu-warning)",
     PS: "#f97316", HP: "#3b82f6", HUP: "#6366f1",
-    HFX: "#a855f7", Scrap: "var(--color-anu-danger)"
+    HFX: "#a855f7", Scrap: "var(--color-anu-danger)",
   };
 
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function RepassPage() {
 
     const merged = repassData.map(r => ({
       ...r,
-      original_defects: boxMap[`${r.batch}__${r.box_number}`] || "-"
+      original_defects: boxMap[`${r.batch}__${r.box_number}`] || "-",
     }));
 
     setViewData(merged);
@@ -120,13 +123,16 @@ export default function RepassPage() {
   }
 
   async function handleSave() {
-    const line    = isOther ? otherLine   : selLine;
-    const batch   = isOther ? otherBatch  : selBatch;
-    const boxNum  = isOther ? parseInt(otherBoxNum) : selBox?.box_number;
+    const line       = isOther ? otherLine  : selLine;
+    const batch      = isOther ? otherBatch : selBatch;
+    const boxNum     = isOther ? parseInt(otherBoxNum) : selBox?.box_number;
     const prevStatus = isOther ? "N/A" : selBox?.status;
 
-    if (!batch || !boxNum) { alert("Please specify the batch number and box number."); return; }
-    if (needDefect && newDefects.length === 0) { alert(`Status "${resultStatus}" Please specify the defects.`); return; }
+    if (!batch || !boxNum) { alert(t("repass.alert_specify_box")); return; }
+    if (needDefect && newDefects.length === 0) {
+      alert(t("repass.alert_specify_defect", { status: resultStatus }));
+      return;
+    }
 
     setSaving(true);
     await supabase.from("repass").insert([{
@@ -137,7 +143,7 @@ export default function RepassPage() {
       result_status:   resultStatus,
       new_defects:     needDefect ? newDefects.join(",") : null,
       type:            mode,
-      reason:          resultStatus === "AF" ? "Normal Re-pass" : reason,
+      reason:          resultStatus === "AF" ? t("repass.reason_normal") : reason,
       start_time:      `${startDate}T${startTime}:00`,
       complete_time:   endTime ? `${endDate}T${endTime}:00` : null,
       repass_by:       user?.fullname,
@@ -156,7 +162,7 @@ export default function RepassPage() {
     if (isOther) {
       setOtherBatch("");
       setOtherBoxNum("");
-      alert("✅ Success");
+      alert(t("repass.alert_success"));
     } else {
       await loadNonAfBoxes(batch);
       setStep("box");
@@ -173,6 +179,19 @@ export default function RepassPage() {
     return true;
   });
 
+  const PERIODS: { key: "All" | "Today" | "Last 7 days"; labelKey: string }[] = [
+    { key: "All",          labelKey: "repass.period_all" },
+    { key: "Today",        labelKey: "repass.period_today" },
+    { key: "Last 7 days",  labelKey: "repass.period_7days" },
+  ];
+
+  const TABLE_HEADERS = [
+    t("repass.col_time"), t("repass.col_line"), t("repass.col_batch"), t("repass.col_box"),
+    t("repass.col_prev_status"), t("repass.col_result"), t("repass.col_defects"),
+    t("repass.col_type"), t("repass.col_reason"), t("repass.col_start"),
+    t("repass.col_complete"), t("repass.col_done_by"),
+  ];
+
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
       <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -185,15 +204,17 @@ export default function RepassPage() {
             else if (step === "batch") { setStep("line"); setSelBatch(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "view" || step === "line" ? "Home" : "Back"}
+            ← {step === "view" || step === "line" ? t("repass.home") : t("repass.back")}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🔄 Re-pass</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
+            🔄 {t("repass.title")}
+          </h1>
           <button onClick={() => { setStep("view"); loadViewData(); }}
             className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition"
             style={step === "view"
               ? { background: "var(--color-anu-accent)", color: "#fff", borderColor: "var(--color-anu-accent)" }
               : cardStyle}>
-            📋 View information
+            📋 {t("repass.view_info")}
           </button>
         </div>
 
@@ -201,11 +222,21 @@ export default function RepassPage() {
         {!["line", "view"].includes(step) && (
           <div className="flex gap-2 mb-6 text-sm flex-wrap">
             {isOther
-              ? <span style={{ color: "var(--color-anu-glow)" }}>Other (Specify yourself)</span>
+              ? <span style={{ color: "var(--color-anu-glow)" }}>{t("repass.other_label")}</span>
               : <>
                   <span style={{ color: "var(--color-anu-glow)" }}>{selLine}</span>
-                  {selBatch && <><span style={{ color: "var(--color-anu-muted)" }}>›</span><span style={{ color: "var(--color-anu-glow)" }}>{selBatch}</span></>}
-                  {selBox && <><span style={{ color: "var(--color-anu-muted)" }}>›</span><span style={{ color: "var(--color-anu-text)" }}>กล่อง #{selBox.box_number}</span></>}
+                  {selBatch && (
+                    <>
+                      <span style={{ color: "var(--color-anu-muted)" }}>›</span>
+                      <span style={{ color: "var(--color-anu-glow)" }}>{selBatch}</span>
+                    </>
+                  )}
+                  {selBox && (
+                    <>
+                      <span style={{ color: "var(--color-anu-muted)" }}>›</span>
+                      <span style={{ color: "var(--color-anu-text)" }}>#{selBox.box_number}</span>
+                    </>
+                  )}
                 </>
             }
           </div>
@@ -215,27 +246,27 @@ export default function RepassPage() {
         {step === "view" && (
           <div>
             <div className="flex gap-3 mb-4 flex-wrap items-center">
-              {["All", "Today", "Last 7 days"].map(p => (
-                <button key={p} onClick={() => { setViewPeriod(p); loadViewData(); }}
+              {PERIODS.map(p => (
+                <button key={p.key} onClick={() => { setViewPeriod(p.key); loadViewData(); }}
                   className="px-4 py-2 rounded-lg text-sm border transition"
-                  style={viewPeriod === p
+                  style={viewPeriod === p.key
                     ? { background: "var(--color-anu-accent)", color: "#fff", borderColor: "var(--color-anu-accent)" }
                     : cardStyle}>
-                  {p}
+                  {t(p.labelKey)}
                 </button>
               ))}
               <span className="ml-auto text-xs" style={{ color: "var(--color-anu-muted)" }}>
-                {filteredView.length} List
+                {filteredView.length} {t("repass.view_list")}
               </span>
             </div>
             {viewLoading ? (
-              <p style={{ color: "var(--color-anu-muted)" }}>Loading...</p>
+              <p style={{ color: "var(--color-anu-muted)" }}>{t("repass.view_loading")}</p>
             ) : (
               <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
                 <table className="w-full text-xs">
                   <thead>
                     <tr style={{ background: "var(--color-anu-elevated)" }}>
-                      {["Time", "Line", "Batch", "Box no.", "Previous status", "Result", "Defects", "Type", "Reason", "Start", "Complete", "Done by"].map(h => (
+                      {TABLE_HEADERS.map(h => (
                         <th key={h} className="px-3 py-3 text-left font-medium whitespace-nowrap"
                             style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
                           {h}
@@ -272,7 +303,7 @@ export default function RepassPage() {
                       </tr>
                     ))}
                     {filteredView.length === 0 && (
-                      <tr><td colSpan={12} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>No information</td></tr>
+                      <tr><td colSpan={12} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>{t("repass.view_no_info")}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -285,16 +316,16 @@ export default function RepassPage() {
         {step === "line" && (
           <div>
             <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
-              Select the Line
+              {t("repass.select_line")}
               {activeLines.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
                       style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
-                  {activeLines.length} Line
+                  {activeLines.length} {t("repass.line_count")}
                 </span>
               )}
             </p>
             {activeLines.length === 0
-              ? <p className="mb-4" style={{ color: "var(--color-anu-success)" }}>✅ No pending tasks in the system.</p>
+              ? <p className="mb-4" style={{ color: "var(--color-anu-success)" }}>{t("repass.no_pending_system")}</p>
               : <div className="grid grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
                   {activeLines.map(l => (
                     <button key={l} onClick={() => {
@@ -319,7 +350,7 @@ export default function RepassPage() {
             }}
               className="px-5 py-3 rounded-xl border text-sm font-medium transition hover:scale-105"
               style={{ ...cardStyle, borderColor: "var(--color-anu-glow)" }}>
-              <span style={{ color: "var(--color-anu-glow)" }}>➕ Other — Specify yourself</span>
+              <span style={{ color: "var(--color-anu-glow)" }}>{t("repass.other_specify")}</span>
             </button>
           </div>
         )}
@@ -327,9 +358,13 @@ export default function RepassPage() {
         {/* STEP 2: Batch */}
         {step === "batch" && (
           <div>
-            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>Choose Batch</p>
+            <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
+              {t("repass.choose_batch")}
+            </p>
             {activeBatches.length === 0
-              ? <p style={{ color: "var(--color-anu-danger)" }}>⚠️ No pending on {selLine}</p>
+              ? <p style={{ color: "var(--color-anu-danger)" }}>
+                  {t("repass.no_pending_line", { line: selLine })}
+                </p>
               : <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {activeBatches.map(b => (
                     <button key={b} onClick={() => { setSelBatch(b); loadNonAfBoxes(b); setStep("box"); }}
@@ -347,14 +382,14 @@ export default function RepassPage() {
         {step === "box" && (
           <div>
             <p className="text-sm mb-4" style={{ color: "var(--color-anu-muted)" }}>
-              Select the box you want to Re-pass
+              {t("repass.select_box")}
               <span className="ml-2 px-2 py-0.5 rounded-full text-xs"
                     style={{ background: "rgba(255,71,87,0.15)", color: "var(--color-anu-danger)" }}>
-                {nonAfBoxes.length} Box
+                {nonAfBoxes.length} {t("repass.box_count")}
               </span>
             </p>
             {nonAfBoxes.length === 0
-              ? <p style={{ color: "var(--color-anu-success)" }}>✅ No pending boxes!</p>
+              ? <p style={{ color: "var(--color-anu-success)" }}>{t("repass.no_pending_boxes")}</p>
               : <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                   {nonAfBoxes.map(b => (
                     <button key={b.id} onClick={() => {
@@ -381,15 +416,14 @@ export default function RepassPage() {
             {/* Left */}
             <div className="flex flex-col gap-4">
 
-              {/* ข้อมูลกล่อง */}
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                  {isOther ? "Specify yourself" : "Previous information"}
+                  {isOther ? t("repass.specify_yourself") : t("repass.previous_info")}
                 </p>
                 {isOther ? (
                   <div className="flex flex-col gap-3">
                     <div>
-                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Line</p>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.line")}</p>
                       <select
                         value={otherLine}
                         onChange={e => setOtherLine(e.target.value)}
@@ -400,23 +434,20 @@ export default function RepassPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Batch</p>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.batch")}</p>
                       <input
                         value={otherBatch}
                         onChange={e => setOtherBatch(e.target.value)}
-                        placeholder=""
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                         style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                       />
                     </div>
                     <div>
-                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Box number</p>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.box_number")}</p>
                       <input
-                        type="number"
-                        min="1"
+                        type="number" min="1"
                         value={otherBoxNum}
                         onChange={e => setOtherBoxNum(e.target.value)}
-                        placeholder=""
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                         style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                       />
@@ -426,13 +457,15 @@ export default function RepassPage() {
                   <div className="flex items-center gap-4">
                     <p className="text-4xl font-black" style={{ color: "var(--color-anu-accent)" }}>#{selBox?.box_number}</p>
                     <div>
-                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Previous status</p>
+                      <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.previous_status")}</p>
                       <span className="px-3 py-1.5 rounded-lg text-sm font-bold"
                             style={{ background: `${STATUS_COLORS[selBox?.status]}20`, color: STATUS_COLORS[selBox?.status] }}>
                         {selBox?.status}
                       </span>
                       {selBox?.defects && (
-                        <p className="text-xs mt-2" style={{ color: "var(--color-anu-muted)" }}>Defect: {selBox.defects}</p>
+                        <p className="text-xs mt-2" style={{ color: "var(--color-anu-muted)" }}>
+                          {t("repass.defect_label")}: {selBox.defects}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -442,7 +475,7 @@ export default function RepassPage() {
               {/* เวลา */}
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                  Type and time
+                  {t("repass.type_and_time")}
                 </p>
                 <div className="flex gap-2 mb-4">
                   {["Online", "Offline"].map(m => (
@@ -459,46 +492,44 @@ export default function RepassPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Start date</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.start_date")}</p>
                     <input
-                      type="date"
-                      value={startDate}
+                      type="date" value={startDate}
                       onChange={e => setStartDate(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                     />
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Start time</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.start_time")}</p>
                     <select
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                     >
-                      {timeOptions.map(t => <option key={t}>{t}</option>)}
+                      {timeOptions.map(tm => <option key={tm}>{tm}</option>)}
                     </select>
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Complete date</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.complete_date")}</p>
                     <input
-                      type="date"
-                      value={endDate}
+                      type="date" value={endDate}
                       onChange={e => setEndDate(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                     />
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>Complete time</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("repass.complete_time")}</p>
                     <select
                       value={endTime}
                       onChange={e => setEndTime(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                     >
-                      <option value="">-- Not specified --</option>
-                      {timeOptions.map(t => <option key={t}>{t}</option>)}
+                      <option value="">{t("repass.not_specified")}</option>
+                      {timeOptions.map(tm => <option key={tm}>{tm}</option>)}
                     </select>
                   </div>
                 </div>
@@ -509,7 +540,7 @@ export default function RepassPage() {
             <div className="flex flex-col gap-4">
               <div className="rounded-xl border p-4" style={cardStyle}>
                 <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                  Result after Re-pass
+                  {t("repass.result_after")}
                 </p>
                 <div className="grid grid-cols-4 gap-2">
                   {BOX_STATUS.map(s => (
@@ -528,7 +559,9 @@ export default function RepassPage() {
 
               {needDefect && (
                 <div className="rounded-xl border p-4" style={cardStyle}>
-                  <p className="text-xs mb-3" style={{ color: "var(--color-anu-danger)" }}>⚠️ ระบุ Defects</p>
+                  <p className="text-xs mb-3" style={{ color: "var(--color-anu-danger)" }}>
+                    {t("repass.specify_defects")}
+                  </p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {DEFECT_LIST.map(d => (
                       <button key={d}
@@ -547,7 +580,7 @@ export default function RepassPage() {
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     rows={2}
-                    placeholder="Additional notes..."
+                    placeholder={t("repass.additional_notes")}
                     className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none"
                     style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                   />
@@ -558,7 +591,7 @@ export default function RepassPage() {
                 <button onClick={handleSave} disabled={saving}
                   className="py-3 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-50"
                   style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                  {saving ? "Recording..." : "💾 Save"}
+                  {saving ? t("repass.saving") : t("repass.save")}
                 </button>
               </div>
             </div>

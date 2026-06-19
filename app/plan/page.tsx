@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n/context";
 
 const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
 const BATCH_STATUS = ["Planing", "Running", "Finished"];
@@ -13,9 +14,9 @@ const BOX_PACKING = ["Box 660", "Box 675", "Box 705", "Box 705+Liner", "Box 760+
 const INK_OPTIONS = ["-", "RMI010004 Black ACG", "RMI010021 White ACG", "RMI010182 Black ACG/TEK", "RMI010017 Red ACG", "RMI010002 Black TEK", "RMI010057 Green TEK", "RMI010033 Yellow/Gold TEK"];
 
 const inputStyle = {
-  background: "var(--color-anu-elevated)",
+  background:  "var(--color-anu-elevated)",
   borderColor: "var(--color-anu-border)",
-  color: "var(--color-anu-text)",
+  color:       "var(--color-anu-text)",
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -41,14 +42,16 @@ function Select({ children, ...props }: any) {
 
 export default function PlanPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [plans, setPlans] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"view" | "add" | "manage">("view");
+  const { t }  = useI18n();
+
+  const [user, setUser]               = useState<any>(null);
+  const [plans, setPlans]             = useState<any[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]                 = useState<"view" | "add" | "manage">("view");
   const [showFinished, setShowFinished] = useState(false);
-  const [showPlaning, setShowPlaning] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
+  const [showPlaning, setShowPlaning]   = useState(false);
+  const [editingPlan, setEditingPlan]   = useState<any>(null);
+  const [saving, setSaving]           = useState(false);
   const [form, setForm] = useState({
     line: "H501", batch: "", sap_batch: "", production_order: "",
     inspection_lot: "", sales_order: "", sales_order_item: "",
@@ -86,7 +89,7 @@ export default function PlanPage() {
   });
 
   async function handleAdd() {
-    if (!form.batch) return alert("Please specify the Batch Number.");
+    if (!form.batch) return alert(t("plan.batch_required"));
     setSaving(true);
     await supabase.from("production_plan").insert([{
       ...form,
@@ -138,9 +141,18 @@ export default function PlanPage() {
     });
   }
 
-  const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
+  const cardStyle    = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
   const runningPlans = plans.filter(p => p.batch_status === "Running");
   const planingPlans = plans.filter(p => p.batch_status === "Planing");
+
+  const TABLE_HEADERS = [
+    "Line","Size","Batch","SAP Batch","Prod. Order","Insp. Lot",
+    "Sales Order","SO Item","FERT Code","Semi Code",
+    "Item Qty (K)","Need AF Box","Customer","Country","Box Packing",
+    "Plan Finish","To be Desp.","Metal Det.","Print",
+    "Ink Cap","Roller Cap","Ink Body","Roller Body",
+    "Status","Finish Date",
+  ];
 
   // ── Edit Modal ──────────────────────────────────────────────────────
   if (editingPlan) return (
@@ -149,10 +161,10 @@ export default function PlanPage() {
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => setEditingPlan(null)}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← Back
+            ← {t("common.back")}
           </button>
           <h1 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>
-            Edit Batch: {editingPlan.batch}
+            {t("plan.edit_batch")}: {editingPlan.batch}
           </h1>
         </div>
         <div className="rounded-xl border p-6 grid grid-cols-2 md:grid-cols-4 gap-4" style={cardStyle}>
@@ -177,11 +189,11 @@ export default function PlanPage() {
           <button onClick={handleSaveEdit} disabled={saving}
             className="px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-            {saving ? "Recording..." : "💾 Save"}
+            {saving ? t("common.saving") : t("plan.save")}
           </button>
           <button onClick={() => setEditingPlan(null)}
             className="px-6 py-2.5 rounded-lg text-sm border" style={cardStyle}>
-            Cancel
+            {t("plan.cancel")}
           </button>
         </div>
       </div>
@@ -197,14 +209,16 @@ export default function PlanPage() {
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.push("/dashboard")}
             className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← Home
+            ← {t("common.home")}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>🗓️ Production Plan</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
+            🗓️ {t("plan.title")}
+          </h1>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {[["view", "🔍 Plan"], ["add", "➕ Add Plan"], ["manage", "🔄 Manage"]].map(([key, label]) => (
+          {([["view", t("plan.tab_view")], ["add", t("plan.tab_add")], ["manage", t("plan.tab_manage")]] as [string, string][]).map(([key, label]) => (
             <button key={key} onClick={() => setTab(key as any)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition"
               style={tab === key
@@ -223,30 +237,23 @@ export default function PlanPage() {
                      style={{ color: "var(--color-anu-muted)" }}>
                 <input type="checkbox" checked={showFinished}
                        onChange={e => setShowFinished(e.target.checked)} />
-                Show Finished
+                {t("plan.show_finished")}
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer"
                      style={{ color: "var(--color-anu-muted)" }}>
                 <input type="checkbox" checked={showPlaning}
                        onChange={e => setShowPlaning(e.target.checked)} />
-                Show Planing
+                {t("plan.show_planing")}
               </label>
             </div>
             {loading ? (
-              <p style={{ color: "var(--color-anu-muted)" }}>Loading...</p>
+              <p style={{ color: "var(--color-anu-muted)" }}>{t("common.loading")}</p>
             ) : (
               <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--color-anu-border)" }}>
                 <table className="text-xs" style={{ minWidth: "2400px" }}>
                   <thead>
                     <tr style={{ background: "var(--color-anu-elevated)" }}>
-                      {[
-                        "Line","Size","Batch","SAP Batch","Prod. Order","Insp. Lot",
-                        "Sales Order","SO Item","FERT Code","Semi Code",
-                        "Item Qty (K)","Need AF Box","Customer","Country","Box Packing",
-                        "Plan Finish","To be Desp.","Metal Det.","Print",
-                        "Ink Cap","Roller Cap","Ink Body","Roller Body",
-                        "Status","Finish Date",
-                      ].map(h => (
+                      {TABLE_HEADERS.map(h => (
                         <th key={h} className="px-3 py-3 text-left font-medium whitespace-nowrap"
                             style={{ color: "var(--color-anu-muted)", borderBottom: "1px solid var(--color-anu-border)" }}>
                           {h}
@@ -299,7 +306,7 @@ export default function PlanPage() {
                       <tr>
                         <td colSpan={25} className="px-4 py-8 text-center"
                             style={{ color: "var(--color-anu-muted)" }}>
-                          No information
+                          {t("plan.no_info")}
                         </td>
                       </tr>
                     )}
@@ -338,7 +345,7 @@ export default function PlanPage() {
             <button onClick={handleAdd} disabled={saving}
               className="mt-6 px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-              {saving ? "Recording..." : "➕ Save"}
+              {saving ? t("common.saving") : t("plan.add_save")}
             </button>
           </div>
         )}
@@ -351,31 +358,31 @@ export default function PlanPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2"
                  style={{ color: "var(--color-anu-success)" }}>
-                🟢 Running ({runningPlans.length})
+                {t("plan.running_section")} ({runningPlans.length})
               </p>
               {runningPlans.length === 0
-                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>No running batch</p>
+                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>{t("plan.no_running")}</p>
                 : runningPlans.map(p => (
                     <div key={p.id}
                          className="rounded-xl border p-4 flex items-center justify-between mb-2"
                          style={cardStyle}>
                       <div>
-                        <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>Line: {p.line}</span>
+                        <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>{t("plan.line_label")}: {p.line}</span>
                         <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
-                        <span style={{ color: "var(--color-anu-text)" }}>Batch: {p.batch}</span>
+                        <span style={{ color: "var(--color-anu-text)" }}>{t("plan.batch_label")}: {p.batch}</span>
                         <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
-                        <span style={{ color: "var(--color-anu-muted)" }}>FERT: {p.fert_code}</span>
+                        <span style={{ color: "var(--color-anu-muted)" }}>{t("plan.fert_label")}: {p.fert_code}</span>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => openEdit(p)}
                           className="px-3 py-1.5 rounded-lg text-xs border"
                           style={cardStyle}>
-                          📝 Edit
+                          📝 {t("common.edit")}
                         </button>
                         <button onClick={() => handleFinish(p.id)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium"
                           style={{ background: "var(--color-anu-accent)", color: "#fff" }}>
-                          🚩 Batch complete
+                          {t("plan.batch_complete")}
                         </button>
                       </div>
                     </div>
@@ -389,31 +396,31 @@ export default function PlanPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2"
                  style={{ color: "var(--color-anu-glow)" }}>
-                🟣 Planing ({planingPlans.length})
+                {t("plan.planing_section")} ({planingPlans.length})
               </p>
               {planingPlans.length === 0
-                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>No planing batch</p>
+                ? <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>{t("plan.no_planing")}</p>
                 : planingPlans.map(p => (
                     <div key={p.id}
                          className="rounded-xl border p-4 flex items-center justify-between mb-2"
                          style={cardStyle}>
                       <div>
-                        <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>Line: {p.line}</span>
+                        <span className="font-semibold" style={{ color: "var(--color-anu-text)" }}>{t("plan.line_label")}: {p.line}</span>
                         <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
-                        <span style={{ color: "var(--color-anu-text)" }}>Batch: {p.batch}</span>
+                        <span style={{ color: "var(--color-anu-text)" }}>{t("plan.batch_label")}: {p.batch}</span>
                         <span className="mx-2" style={{ color: "var(--color-anu-border)" }}>|</span>
-                        <span style={{ color: "var(--color-anu-muted)" }}>FERT: {p.fert_code}</span>
+                        <span style={{ color: "var(--color-anu-muted)" }}>{t("plan.fert_label")}: {p.fert_code}</span>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => openEdit(p)}
                           className="px-3 py-1.5 rounded-lg text-xs border"
                           style={cardStyle}>
-                          📝 Edit
+                          📝 {t("common.edit")}
                         </button>
                         <button onClick={() => handleStartRunning(p.id)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium"
                           style={{ background: "var(--color-anu-success)", color: "#fff" }}>
-                          ▶️ Start batch
+                          {t("plan.start_batch")}
                         </button>
                       </div>
                     </div>
