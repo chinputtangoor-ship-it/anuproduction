@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { Sidebar } from "@/components/Sidebar";
+import { AuthProvider, useAuth } from "@/lib/auth/AuthProvider";
 import { I18nProvider } from "@/lib/i18n/context";
 import "./globals.css";
 
@@ -14,8 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="th" className="dark">
       <body className={inter.className}>
         <I18nProvider>
-          <GlobalHeader />
-          <AppBody>{children}</AppBody>
+          <AuthProvider>
+            <GlobalHeader />
+            <AppBody>{children}</AppBody>
+          </AuthProvider>
         </I18nProvider>
       </body>
     </html>
@@ -24,23 +27,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function AppBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogin  = pathname === "/login";
-
-  let role = "operator";
-  if (typeof window !== "undefined") {
-    try {
-      const u = localStorage.getItem("anu_user");
-      if (u) role = JSON.parse(u).role;
-    } catch {}
-  }
+  const { user } = useAuth();
+  const isLogin = pathname === "/login";
 
   if (isLogin) return <>{children}</>;
 
   return (
     <div className="flex" style={{ minHeight: "calc(100vh - 56px)" }}>
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 overflow-x-hidden"
-            style={{ background: "var(--color-anu-void)" }}>
+      <Sidebar role={user?.role ?? "operator"} />
+      <main
+        className="flex-1 min-w-0 overflow-x-hidden"
+        style={{ background: "var(--color-anu-void)" }}
+      >
         {children}
       </main>
     </div>

@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 
 const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"];
 const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
-const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
 
 export default function RepassPage() {
   const router = useRouter();
   const { t }  = useI18n();
 
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: authLoading } = useRequireAuth();
   const [step, setStep] = useState<"line" | "batch" | "box" | "record" | "view">("line");
 
   const [activeLines, setActiveLines]     = useState<string[]>([]);
@@ -25,7 +26,7 @@ export default function RepassPage() {
   const [selBox, setSelBox]     = useState<any>(null);
   const [isOther, setIsOther]   = useState(false);
 
-  const [otherLine, setOtherLine]     = useState(LINES[0]);
+  const [otherLine, setOtherLine]     = useState(PRODUCTION_LINES[0]);
   const [otherBatch, setOtherBatch]   = useState("");
   const [otherBoxNum, setOtherBoxNum] = useState("");
 
@@ -63,11 +64,9 @@ export default function RepassPage() {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem("anu_user");
-    if (!stored) { router.push("/login"); return; }
-    setUser(JSON.parse(stored));
+    if (authLoading || !user) return;
     loadActiveLines();
-  }, []);
+  }, [authLoading, user]);
 
   async function loadActiveLines() {
     const { data } = await supabase.from("boxes").select("line").neq("status", "AF");
@@ -91,7 +90,7 @@ export default function RepassPage() {
     const { data: repassData } = await supabase
       .from("repass")
       .select("*")
-      .order("time_stamp", { ascending: false })
+      .order("recorded_at", { ascending: false })
       .limit(200);
 
     if (!repassData || repassData.length === 0) {
@@ -136,17 +135,17 @@ export default function RepassPage() {
 
     setSaving(true);
     await supabase.from("repass").insert([{
-      time_stamp:      new Date().toISOString(),
       line, batch,
-      box_number:      boxNum,
+      box_number: boxNum,
       previous_status: prevStatus,
-      result_status:   resultStatus,
-      new_defects:     needDefect ? newDefects.join(",") : null,
-      type:            mode,
-      reason:          resultStatus === "AF" ? t("repass.reason_normal") : reason,
-      start_time:      `${startDate}T${startTime}:00`,
-      complete_time:   endTime ? `${endDate}T${endTime}:00` : null,
-      repass_by:       user?.fullname,
+      result_status: resultStatus,
+      new_defects: needDefect ? newDefects.join(",") : null,
+      type: mode,
+      reason: resultStatus === "AF" ? t("repass.reason_normal") : reason,
+      start_time: `${startDate}T${startTime}:00`,
+      complete_time: endTime ? `${endDate}T${endTime}:00` : null,
+      repass_by: user?.fullname,
+      recorded_by: user?.id,
     }]);
 
     if (!isOther) {
@@ -172,7 +171,7 @@ export default function RepassPage() {
 
   const filteredView = viewData.filter(r => {
     if (viewPeriod === "All") return true;
-    const d = new Date(r.time_stamp);
+    const d = new Date(r.recorded_at);
     const n = new Date();
     if (viewPeriod === "Today") return d.toDateString() === n.toDateString();
     if (viewPeriod === "Last 7 days") return (n.getTime() - d.getTime()) < 7 * 86400000;
@@ -191,6 +190,8 @@ export default function RepassPage() {
     t("repass.col_type"), t("repass.col_reason"), t("repass.col_start"),
     t("repass.col_complete"), t("repass.col_done_by"),
   ];
+
+  if (authLoading || !user) return null;
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -277,7 +278,7 @@ export default function RepassPage() {
                   <tbody>
                     {filteredView.map((r, i) => (
                       <tr key={r.id} style={{ background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)", borderTop: "1px solid var(--color-anu-border)" }}>
-                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>{r.time_stamp?.slice(0, 16).replace("T", " ")}</td>
+                        <td className="px-3 py-2 whitespace-nowrap" style={{ color: "var(--color-anu-muted)" }}>{r.recorded_at?.slice(0, 16).replace("T", " ")}</td>
                         <td className="px-3 py-2 font-medium" style={{ color: "var(--color-anu-text)" }}>{r.line}</td>
                         <td className="px-3 py-2" style={{ color: "var(--color-anu-text)" }}>{r.batch}</td>
                         <td className="px-3 py-2 text-center font-bold" style={{ color: "var(--color-anu-text)" }}>#{r.box_number}</td>
@@ -430,7 +431,7 @@ export default function RepassPage() {
                         className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                         style={{ background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" }}
                       >
-                        {LINES.map(l => <option key={l}>{l}</option>)}
+                        {PRODUCTION_LINES.map(l => <option key={l}>{l}</option>)}
                       </select>
                     </div>
                     <div>

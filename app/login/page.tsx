@@ -1,84 +1,113 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/pages/Logo";
-import { supabase } from "@/lib/supabase";
+import { usernameToAuthEmail } from "@/lib/auth/email";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/i18n/context";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, loading: authLoading, refresh } = useAuth();
+  const { t } = useI18n();
+  const supabase = createClient();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [showChangePw, setShowChangePw] = useState(false);
-  const [pendingUser, setPendingUser] = useState<any>(null);
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
 
+  useEffect(() => {
+    if (!authLoading && user && !user.first_login) {
+      router.replace("/dashboard");
+    }
+    if (!authLoading && user?.first_login) {
+      setShowChangePw(true);
+    }
+  }, [authLoading, user, router]);
+
   async function handleLogin() {
     setLoading(true);
     setError("");
 
-    const { data, error: err } = await supabase
-      .from("app_users")
-      .select("*")
-      .eq("username", username.trim())
-      .single();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: usernameToAuthEmail(username),
+      password,
+    });
 
-    if (err || !data) {
-      setError("Username or Password is incorrect.");
+    if (signInError) {
+      setError(t("login.wrong_credential"));
       setLoading(false);
       return;
     }
 
-    if (data.password_hash !== password) {
-      setError("Username or Password is incorrect.");
-      setLoading(false);
-      return;
-    }
-
+    await refresh();
     setLoading(false);
 
-    if (data.first_login) {
-      setPendingUser(data);
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    if (!authUser) {
+      setError(t("login.wrong_credential"));
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("must_change_password, is_active")
+      .eq("id", authUser.id)
+      .single();
+
+    if (!profile?.is_active) {
+      await supabase.auth.signOut();
+      setError(t("login.wrong_credential"));
+      return;
+    }
+
+    if (profile.must_change_password) {
       setShowChangePw(true);
       return;
     }
 
-    localStorage.setItem("anu_user", JSON.stringify(data));
     router.push("/dashboard");
   }
 
   async function handleChangePassword() {
     setPwError("");
     if (newPw.length < 6) {
-      setPwError("Password must be least 6 characters long."); return;
+      setPwError(t("login.err_too_short"));
+      return;
     }
     if (newPw !== confirmPw) {
-      setPwError("Password does not match. Please enter a new one."); return;
-    }
-    if (newPw === pendingUser.password_hash) {
-      setPwError("New password must be different from the old password."); return;
+      setPwError(t("login.err_not_match"));
+      return;
     }
 
     setPwSaving(true);
-    const { error } = await supabase
-      .from("app_users")
-      .update({ password_hash: newPw, first_login: false })
-      .eq("id", pendingUser.id);
+    const res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPw, confirm: confirmPw }),
+    });
+    const data = await res.json();
 
-    if (error) {
-      setPwError(`Saving failed.: ${error.message}`);
+    if (!res.ok) {
+      setPwError(data.error ?? t("login.err_save_failed"));
       setPwSaving(false);
       return;
     }
 
-    const updatedUser = { ...pendingUser, password_hash: newPw, first_login: false };
-    localStorage.setItem("anu_user", JSON.stringify(updatedUser));
+    await refresh();
+    setPwSaving(false);
     router.push("/dashboard");
   }
 
@@ -92,35 +121,36 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
 
-      {/* First-login modal */}
       {showChangePw && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
-             style={{ background: "rgba(0,0,0,0.7)" }}>
-          <div className="w-full max-w-sm rounded-2xl border p-6 flex flex-col gap-4"
-               style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-glow)" }}>
-
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.7)" }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 flex flex-col gap-4"
+            style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-glow)" }}
+          >
             <div className="text-center">
               <p className="text-2xl mb-1">🔐</p>
               <h2 className="text-base font-bold" style={{ color: "var(--color-anu-text)" }}>
-                New users must change their password before use.
+                {t("login.change_pw_title")}
               </h2>
               <p className="text-xs mt-1" style={{ color: "var(--color-anu-muted)" }}>
-                Username{" "}
-                <span style={{ color: "var(--color-anu-glow)" }}>{pendingUser?.username}</span>{" "}
-                still using the default password.
+                {user?.username ?? username}{" "}
+                {t("login.change_pw_subtitle")}
               </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                New password
+                {t("login.new_password")}
               </label>
               <input
                 type="password"
                 value={newPw}
-                onChange={e => setNewPw(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                placeholder="Least 6 characters"
+                onChange={(e) => setNewPw(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
+                placeholder={t("login.new_password_hint")}
                 className={inputCls}
                 style={inputSty}
               />
@@ -128,14 +158,14 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-                Confirm new password
+                {t("login.confirm_password")}
               </label>
               <input
                 type="password"
                 value={confirmPw}
-                onChange={e => setConfirmPw(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                placeholder="Enter password again."
+                onChange={(e) => setConfirmPw(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
+                placeholder={t("login.confirm_hint")}
                 className={inputCls}
                 style={inputSty}
               />
@@ -153,23 +183,24 @@ export default function LoginPage() {
               className="rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}
             >
-              {pwSaving ? "Recording" : "✅ Save"}
+              {pwSaving ? t("login.saving_pw") : t("login.save_pw")}
             </button>
 
             <p className="text-xs text-center" style={{ color: "var(--color-anu-muted)" }}>
-              This step cannot be skipped.
+              {t("login.cannot_skip")}
             </p>
           </div>
         </div>
       )}
 
-      {/* Login card */}
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-3 mb-8">
           <Logo className="w-14 h-14" />
           <div className="text-center">
-            <p className="text-xs font-medium uppercase tracking-widest"
-               style={{ color: "var(--color-anu-glow)" }}>
+            <p
+              className="text-xs font-medium uppercase tracking-widest"
+              style={{ color: "var(--color-anu-glow)" }}
+            >
               The Quantum Core
             </p>
             <h1 className="text-2xl font-bold" style={{ color: "var(--color-anu-text)" }}>
@@ -178,18 +209,19 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border p-6 flex flex-col gap-4"
-             style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}>
-
+        <div
+          className="rounded-xl border p-6 flex flex-col gap-4"
+          style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" }}
+        >
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-              Username
+              {t("login.username")}
             </label>
             <input
               type="text"
               value={username}
-              onChange={e => setUsername(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleLogin()}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               className={inputCls}
               style={inputSty}
               placeholder="username"
@@ -198,13 +230,13 @@ export default function LoginPage() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: "var(--color-anu-muted)" }}>
-              Password
+              {t("login.password")}
             </label>
             <input
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleLogin()}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               className={inputCls}
               style={inputSty}
               placeholder="password"
@@ -223,12 +255,12 @@ export default function LoginPage() {
             className="mt-1 rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}
           >
-            {loading ? "Logging in..." : "Log in"}
+            {loading ? t("login.logging_in") : t("login.login_btn")}
           </button>
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: "var(--color-anu-muted)" }}>
-          ANU Production Intelligence · Ver 2.0
+          {t("login.version")}
         </p>
       </div>
     </main>

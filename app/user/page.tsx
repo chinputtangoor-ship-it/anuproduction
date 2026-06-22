@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useI18n } from "@/lib/i18n/context";
 
 const ROLES = ["operator", "qc_technician", "production_operator", "warehouse_operator", "supervisor", "manager", "admin"];
@@ -28,7 +28,7 @@ export default function AccountPage() {
   const router  = useRouter();
   const { t }   = useI18n();
 
-  const [user, setUser]               = useState<any>(null);
+  const { user, loading: authLoading } = useRequireAuth();
   const [users, setUsers]             = useState<any[]>([]);
   const [tab, setTab]                 = useState<"add" | "manage">("add");
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -57,21 +57,26 @@ export default function AccountPage() {
   const dateStyle  = { ...inputStyle, colorScheme: "dark" as const };
 
   useEffect(() => {
-    const stored = localStorage.getItem("anu_user");
-    if (!stored) { router.push("/login"); return; }
-    const u = JSON.parse(stored);
-    if (u.role !== "admin") { router.push("/dashboard"); return; }
-    setUser(u);
+    if (authLoading) return;
+    if (!user) return;
+    if (user.role !== "admin") {
+      router.push("/dashboard");
+      return;
+    }
     loadUsers();
-  }, []);
+  }, [authLoading, user, router]);
 
   useEffect(() => { setPreviewUn(fn.trim() ? generateUsername(fn) : ""); }, [fn]);
   useEffect(() => { setPreviewPw(generatePassword()); }, []);
 
   async function loadUsers() {
-    const { data, error } = await supabase.from("app_users").select("*").order("fullname");
-    if (error) { showMsg(`❌ ${error.message}`, "error"); return; }
-    setUsers(data || []);
+    const res = await fetch("/api/admin/users");
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg(`❌ ${data.error ?? "Load failed"}`, "error");
+      return;
+    }
+    setUsers(data.users || []);
   }
 
   function showMsg(text: string, type: "success" | "error") {
@@ -89,18 +94,26 @@ export default function AccountPage() {
     if (dup) { showMsg(t("user.err_dup_username", { name: finalUn }), "error"); return; }
 
     setSaving(true);
-    const { error } = await supabase.from("app_users").insert([{
-      fullname:      fn.trim(),
-      emp_id:        eid.trim() || null,
-      username:      finalUn,
-      password_hash: finalPw,
-      role,
-      birth_date:    birthDate || null,
-      join_date:     joinDate  || null,
-      first_login:   true,
-    }]);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullname: fn.trim(),
+        emp_id: eid.trim() || null,
+        username: finalUn,
+        password: finalPw,
+        role,
+        birth_date: birthDate || null,
+        join_date: joinDate || null,
+      }),
+    });
+    const data = await res.json();
 
-    if (error) { showMsg(`❌ ${t("user.err_save_failed")}: ${error.message}`, "error"); setSaving(false); return; }
+    if (!res.ok) {
+      showMsg(`❌ ${data.error ?? t("user.err_save_failed")}`, "error");
+      setSaving(false);
+      return;
+    }
 
     await loadUsers();
     showMsg(t("user.suc_add", { name: fn.trim(), username: finalUn, password: finalPw }), "success");
@@ -126,16 +139,25 @@ export default function AccountPage() {
     if (dup) { showMsg(t("user.err_dup_username_edit"), "error"); return; }
 
     setSaving(true);
-    const { error } = await supabase.from("app_users").update({
-      fullname:   editFn.trim(),
-      emp_id:     editEid.trim() || null,
-      username:   editUn.trim(),
-      role:       editRole,
-      birth_date: editBirthDate || null,
-      join_date:  editJoinDate  || null,
-    }).eq("id", editingUser.id);
+    const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullname: editFn.trim(),
+        emp_id: editEid.trim() || null,
+        username: editUn.trim(),
+        role: editRole,
+        birth_date: editBirthDate || null,
+        join_date: editJoinDate || null,
+      }),
+    });
+    const data = await res.json();
 
-    if (error) { showMsg(`❌ ${t("user.err_update_failed")}: ${error.message}`, "error"); setSaving(false); return; }
+    if (!res.ok) {
+      showMsg(`❌ ${data.error ?? t("user.err_update_failed")}`, "error");
+      setSaving(false);
+      return;
+    }
 
     await loadUsers();
     showMsg(t("user.suc_update"), "success");
@@ -150,19 +172,18 @@ export default function AccountPage() {
     if (target.username === user?.username) {
       showMsg(t("user.err_delete_self"), "error"); return;
     }
-    const { error } = await supabase.from("app_users").delete().eq("id", target.id);
-    if (error) { showMsg(`❌ ${t("user.err_delete_failed")}: ${error.message}`, "error"); return; }
+    const res = await fetch(`/api/admin/users/${target.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) { showMsg(`❌ ${data.error ?? t("user.err_delete_failed")}`, "error"); return; }
     await loadUsers();
     showMsg(t("user.suc_delete", { name: target.fullname }), "success");
   }
 
   async function handleResetPassword(target: any) {
-    const newPw = generatePassword();
-    const { error } = await supabase.from("app_users").update({
-      password_hash: newPw,
-      first_login:   true,
-    }).eq("id", target.id);
-    if (error) { showMsg(`❌ ${t("user.err_reset_failed")}: ${error.message}`, "error"); return; }
+    const res = await fetch(`/api/admin/users/${target.id}/reset-password`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) { showMsg(`❌ ${data.error ?? t("user.err_reset_failed")}`, "error"); return; }
+    const newPw = data.password as string;
     await loadUsers();
     showMsg(t("user.suc_reset_pw", { name: target.fullname, password: newPw }), "success");
   }
@@ -197,6 +218,8 @@ export default function AccountPage() {
   // ── Date display ─────────────────────────────────────────────────────────────
   const fmtDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+
+  if (authLoading || !user) return null;
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -408,8 +431,8 @@ export default function AccountPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs"
-                              style={{ color: u.first_login ? "var(--color-anu-warning)" : "var(--color-anu-success)" }}>
-                          {u.first_login ? t("user.status_first_login") : t("user.status_normal")}
+                              style={{ color: u.must_change_password ? "var(--color-anu-warning)" : "var(--color-anu-success)" }}>
+                          {u.must_change_password ? t("user.status_first_login") : t("user.status_normal")}
                         </span>
                       </td>
                       <td className="px-4 py-3">

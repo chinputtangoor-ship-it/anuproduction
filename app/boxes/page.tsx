@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 
 export default function BoxesPage() {
   const router = useRouter();
-  const { t }  = useI18n();
+  const { t } = useI18n();
+  const { loading: authLoading } = useRequireAuth();
 
   const [searchBatch, setSearchBatch] = useState("");
   const [boxes, setBoxes]             = useState<any[]>([]);
@@ -27,10 +29,7 @@ export default function BoxesPage() {
     HFX: "#a855f7", Scrap: "var(--color-anu-danger)",
   };
 
-  useEffect(() => {
-    const stored = localStorage.getItem("anu_user");
-    if (!stored) { router.push("/login"); return; }
-  }, []);
+  if (authLoading) return null;
 
   async function handleSearch() {
     if (!searchBatch.trim()) return;
@@ -296,7 +295,7 @@ export default function BoxesPage() {
                       <tr key={b.id} style={{ background: i % 2 === 0 ? "var(--color-anu-surface)" : "var(--color-anu-void)", borderTop: "1px solid var(--color-anu-border)" }}>
                         <td className="px-4 py-3 font-black text-lg" style={{ color: "var(--color-anu-accent)" }}>#{b.box_number}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "var(--color-anu-muted)" }}>
-                          {b.time_stamp?.slice(0, 16).replace("T", " ")}
+                          {b.recorded_at?.slice(0, 16).replace("T", " ")}
                         </td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-1 rounded-full text-xs font-bold"

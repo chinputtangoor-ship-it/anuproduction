@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 
-const LINES = Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`);
 const BATCH_STATUS = ["Planing", "Running", "Finished"];
 const CUSTOMER_NAMES = ["ACG NORTH AMERCA LLC", "FAME Pharma Pte ltd", "PT.ACG Indonesia", "COMMUNITY PHARMACY PUBLIC", "ERNEST CHEMIST LTD", "Gel strength Co Ltd (Head office)"];
 const COUNTRIES = ["Thailand", "Indonesia", "USA", "Ghana", "Myanmar", "Singapore", "Vietnam"];
@@ -44,7 +45,7 @@ export default function PlanPage() {
   const router = useRouter();
   const { t }  = useI18n();
 
-  const [user, setUser]               = useState<any>(null);
+  const { user, loading: authLoading } = useRequireAuth();
   const [plans, setPlans]             = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
   const [tab, setTab]                 = useState<"view" | "add" | "manage">("view");
@@ -65,11 +66,9 @@ export default function PlanPage() {
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem("anu_user");
-    if (!stored) { router.push("/login"); return; }
-    setUser(JSON.parse(stored));
+    if (authLoading || !user) return;
     loadPlans();
-  }, []);
+  }, [authLoading, user]);
 
   async function loadPlans() {
     setLoading(true);
@@ -155,6 +154,8 @@ export default function PlanPage() {
   ];
 
   // ── Edit Modal ──────────────────────────────────────────────────────
+  if (authLoading || !user) return null;
+
   if (editingPlan) return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
       <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -169,7 +170,7 @@ export default function PlanPage() {
         </div>
         <div className="rounded-xl border p-6 grid grid-cols-2 md:grid-cols-4 gap-4" style={cardStyle}>
           {([
-            ["Line",        <Select value={editingPlan.line} onChange={(e: any) => setEditingPlan({ ...editingPlan, line: e.target.value })}>{LINES.map(l => <option key={l}>{l}</option>)}</Select>],
+            ["Line",        <Select value={editingPlan.line} onChange={(e: any) => setEditingPlan({ ...editingPlan, line: e.target.value })}>{PRODUCTION_LINES.map(l => <option key={l}>{l}</option>)}</Select>],
             ["Batch",       <Input value={editingPlan.batch} onChange={(e: any) => setEditingPlan({ ...editingPlan, batch: e.target.value })} />],
             ["SAP Batch",   <Input value={editingPlan.sap_batch} onChange={(e: any) => setEditingPlan({ ...editingPlan, sap_batch: e.target.value })} />],
             ["Prod. Order", <Input value={editingPlan.production_order} onChange={(e: any) => setEditingPlan({ ...editingPlan, production_order: e.target.value })} />],
@@ -321,7 +322,7 @@ export default function PlanPage() {
         {tab === "add" && (
           <div className="rounded-xl border p-6" style={cardStyle}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Field label="Line"><Select value={form.line} onChange={(e: any) => setForm({ ...form, line: e.target.value })}>{LINES.map(l => <option key={l}>{l}</option>)}</Select></Field>
+              <Field label="Line"><Select value={form.line} onChange={(e: any) => setForm({ ...form, line: e.target.value })}>{PRODUCTION_LINES.map(l => <option key={l}>{l}</option>)}</Select></Field>
               <Field label="Batch *"><Input value={form.batch} onChange={(e: any) => setForm({ ...form, batch: e.target.value })} placeholder="เช่น H50126052" /></Field>
               <Field label="SAP Batch"><Input value={form.sap_batch} onChange={(e: any) => setForm({ ...form, sap_batch: e.target.value })} /></Field>
               <Field label="Prod. Order"><Input value={form.production_order} onChange={(e: any) => setForm({ ...form, production_order: e.target.value })} /></Field>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import {
@@ -79,6 +80,7 @@ export default function AnalyticsPage() {
   const [customStartTime, setCustomStartTime] = useState("07:00");
   const [customEndTime, setCustomEndTime]     = useState("19:00");
 
+  const { user, loading: authLoading } = useRequireAuth();
   const [plans, setPlans]         = useState<any[]>([]);
   const [boxes, setBoxes]         = useState<any[]>([]);
   const [backlog, setBacklog]     = useState<any[]>([]);
@@ -88,10 +90,9 @@ export default function AnalyticsPage() {
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem("anu_user");
-    if (!stored) { router.push("/login"); return; }
+    if (authLoading || !user) return;
     loadAll();
-  }, []);
+  }, [authLoading, user]);
 
   async function loadAll() {
     setLoading(true);
@@ -148,11 +149,11 @@ export default function AnalyticsPage() {
     return d;
   }
 
-  const fBoxes   = applyFilter(boxes,     "line", "time_stamp");
-  const fRej     = applyFilter(rejection, "line", "time_stamp");
-  const fCamera  = applyFilter(camera,    "line", "time_stamp");
-  const fRepass  = applyFilter(repass,    "line", "time_stamp");
-  const fBacklog = applyFilter(backlog,   "line");
+  const fBoxes   = applyFilter(boxes,     "line", "recorded_at");
+  const fRej     = applyFilter(rejection, "line", "recorded_at");
+  const fCamera  = applyFilter(camera,    "line", "recorded_at");
+  const fRepass  = applyFilter(repass,    "line", "recorded_at");
+  const fBacklog = applyFilter(backlog,   "line", "recorded_at");
   const fPlans   = filterLine === "All" ? plans : plans.filter(p => p.line === filterLine);
 
   const runningPlans = plans.filter(p => p.batch_status === "Running");
@@ -176,7 +177,7 @@ export default function AnalyticsPage() {
   const activeLines = [...new Set(fBoxes.map(b => b.line))].length;
   const latestBacklog = Object.values(
     fBacklog.reduce((acc: any, b) => {
-      if (!acc[b.line] || new Date(b.time_stamp) > new Date(acc[b.line].time_stamp)) acc[b.line] = b;
+      if (!acc[b.line] || new Date(b.recorded_at) > new Date(acc[b.line].recorded_at)) acc[b.line] = b;
       return acc;
     }, {})
   ).reduce((s: number, b: any) => s + (b.total_backlog || 0), 0);
@@ -191,7 +192,7 @@ export default function AnalyticsPage() {
     const tgt = runPlans.filter(p => p.line === ln).reduce((s, p) => s + (p.need_af_box || 0), 0);
     const yld = tgt > 0 ? af / tgt * 100 : 0;
     const rejKg = fRej.filter(r => r.line === ln).reduce((s, r) => s + (r.total_kg || 0), 0);
-    const blEntry = fBacklog.filter(b => b.line === ln).sort((a, b) => new Date(b.time_stamp).getTime() - new Date(a.time_stamp).getTime())[0];
+    const blEntry = fBacklog.filter(b => b.line === ln).sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())[0];
     const bl = blEntry?.total_backlog || 0;
     const batches = [...new Set(lb.map(b => b.batch))].join(", ");
     return { line: ln, af, tot, scr, tgt, yld, rejKg, bl, batches };
@@ -210,7 +211,7 @@ export default function AnalyticsPage() {
   const latestBoxMap: Record<string, any> = {};
   boxes.forEach(b => {
     const key = `${b.batch}__${b.box_number}`;
-    if (!latestBoxMap[key] || new Date(b.time_stamp) > new Date(latestBoxMap[key].time_stamp))
+    if (!latestBoxMap[key] || new Date(b.recorded_at) > new Date(latestBoxMap[key].recorded_at))
       latestBoxMap[key] = b;
   });
   const pendingBoxes = Object.values(latestBoxMap)
@@ -305,6 +306,8 @@ export default function AnalyticsPage() {
     t("analytics.tab_quality"),
     t("analytics.tab_detail"),
   ];
+
+  if (authLoading || !user) return null;
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -776,7 +779,7 @@ export default function AnalyticsPage() {
                               </span>
                             </td>
                             <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{b.defects || "-"}</td>
-                            <td className="px-3 py-2 whitespace-nowrap" style={{ color: "#94a3b8" }}>{b.time_stamp?.slice(0, 16).replace("T", " ")}</td>
+                            <td className="px-3 py-2 whitespace-nowrap" style={{ color: "#94a3b8" }}>{b.recorded_at?.slice(0, 16).replace("T", " ")}</td>
                           </tr>
                         ))}
                       </tbody>
