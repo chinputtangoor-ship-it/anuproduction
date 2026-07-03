@@ -233,6 +233,7 @@
     "no_data":            "No information available.",
 
     "err_fill_info":        "⚠️ Please fill in the user information.",
+    "err_invalid_username": "⚠️ Username must be at least 3 characters (a-z, 0-9, ., _, - only).",
     "err_dup_username":     "❌ Username \"{{name}}\" This user is already in the system.",
     "err_save_failed":      "❌ Saving failed.",
     "err_empty_fields":     "⚠️ The name and username cannot be empty.",

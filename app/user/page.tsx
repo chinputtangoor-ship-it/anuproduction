@@ -3,9 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { generateUsernameFromFullname, isValidUsername, sanitizeUsername } from "@/lib/auth/username";
 import { useI18n } from "@/lib/i18n/context";
 
-const ROLES = ["operator", "qc_technician", "production_operator", "warehouse_operator", "supervisor", "manager", "admin"];
+const ROLES = [
+  "operator",
+  "qc_technician",
+  "production_operator",
+  "warehouse_operator",
+  "supervisor",
+  "manager",
+  "planner",
+  "admin",
+];
 
 function generatePassword(): string {
   const letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -16,13 +26,6 @@ function generatePassword(): string {
   return pwd.split("").sort(() => Math.random() - 0.5).join("");
 }
 
-function generateUsername(fullname: string): string {
-  const parts = fullname.trim().split(/\s+/);
-  if (parts.length < 2) return parts[0].toLowerCase();
-  const firstName = parts[0];
-  const lastName  = parts[parts.length - 1];
-  return (firstName + lastName.slice(0, 2)).toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-}
 
 export default function AccountPage() {
   const router  = useRouter();
@@ -66,7 +69,9 @@ export default function AccountPage() {
     loadUsers();
   }, [authLoading, user, router]);
 
-  useEffect(() => { setPreviewUn(fn.trim() ? generateUsername(fn) : ""); }, [fn]);
+  useEffect(() => {
+    setPreviewUn(fn.trim() ? generateUsernameFromFullname(fn, eid) : "");
+  }, [fn, eid]);
   useEffect(() => { setPreviewPw(generatePassword()); }, []);
 
   async function loadUsers() {
@@ -87,8 +92,13 @@ export default function AccountPage() {
   async function handleAdd() {
     if (!fn.trim()) { showMsg(t("user.err_fill_info"), "error"); return; }
 
-    const finalUn = previewUn || generateUsername(fn);
+    const finalUn = sanitizeUsername(previewUn || generateUsernameFromFullname(fn, eid));
     const finalPw = previewPw || generatePassword();
+
+    if (!isValidUsername(finalUn)) {
+      showMsg(t("user.err_invalid_username"), "error");
+      return;
+    }
 
     const dup = users.find(u => u.username === finalUn);
     if (dup) { showMsg(t("user.err_dup_username", { name: finalUn }), "error"); return; }
