@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!canAccessRoute(user.role, pathname)) {
+    if (!canAccessRoute(user.role, pathname, user.department)) {
       router.replace("/dashboard");
     }
   }, [user, loading, pathname, router]);

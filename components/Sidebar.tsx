@@ -2,15 +2,24 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { AppIcon } from "@/components/AppIcon";
 import {
   APP_MENU,
+  GLOBAL_MENU_ITEMS,
   getVisibleMenuItems,
   getVisibleSections,
 } from "@/lib/navigation/menu";
+import type { Department } from "@/lib/constants/departments";
 import type { UserRole } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n/context";
 
-export function Sidebar({ role }: { role: string }) {
+export function Sidebar({
+  role,
+  department,
+}: {
+  role: string;
+  department?: Department | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
@@ -27,7 +36,7 @@ export function Sidebar({ role }: { role: string }) {
   const toggle = (sectionKey: string) =>
     setOpen((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
 
-  const visibleSections = getVisibleSections(userRole);
+  const visibleSections = getVisibleSections(userRole, department);
 
   return (
     <aside
@@ -44,9 +53,27 @@ export function Sidebar({ role }: { role: string }) {
             borderLeft: pathname === "/dashboard" ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
           }}
         >
-          <span>🏠</span>
+          <AppIcon name="home" size={18} />
           <span>{t("common.home")}</span>
         </button>
+        {GLOBAL_MENU_ITEMS.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <button
+              key={item.href}
+              onClick={() => router.push(item.href)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition"
+              style={{
+                background: active ? "rgba(124,92,255,0.15)" : "transparent",
+                color: active ? "var(--color-anu-glow)" : "var(--color-anu-muted)",
+                borderLeft: active ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
+              }}
+            >
+              <AppIcon name={item.icon} size={18} />
+              <span>{t(item.labelKey)}</span>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="px-3 mb-2" style={{ borderBottom: "1px solid var(--color-anu-border)" }} />
@@ -69,18 +96,17 @@ export function Sidebar({ role }: { role: string }) {
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <span>{section.icon}</span>
+                  <AppIcon name={section.icon} size={18} />
                   <span>{t(section.sectionKey)}</span>
                 </div>
                 <span
-                  className="text-xs transition-transform duration-200"
+                  className="inline-flex transition-transform duration-200"
                   style={{
                     color: "var(--color-anu-muted)",
-                    display: "inline-block",
                     transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
                   }}
                 >
-                  ▾
+                  <AppIcon name="chevronDown" size={14} />
                 </span>
               </button>
 
@@ -103,7 +129,7 @@ export function Sidebar({ role }: { role: string }) {
                             borderLeft: active ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
                           }}
                         >
-                          <span>{item.icon}</span>
+                          <AppIcon name={item.icon} size={16} />
                           <span>{t(item.labelKey)}</span>
                         </button>
                       );

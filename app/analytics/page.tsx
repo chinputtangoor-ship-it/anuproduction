@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { computePostProductionKpis } from "@/lib/calculations/post-production-kpis";
+import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { AppIcon } from "@/components/AppIcon";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer,
-  ComposedChart,
 } from "recharts";
 
 const ACCENT   = "#7c5cff";
@@ -218,22 +220,8 @@ export default function AnalyticsPage() {
     .filter(b => b.status !== "AF")
     .filter(b => filterLine === "All" || b.line === filterLine);
 
-  const defectCounts: Record<string, number> = {};
-  pendingBoxes.forEach(b => {
-    if (!b.defects) return;
-    b.defects.split(",").forEach((d: string) => {
-      const t = d.trim();
-      if (t && !["nan","none","-",""].includes(t.toLowerCase()))
-        defectCounts[t] = (defectCounts[t] || 0) + 1;
-    });
-  });
-  const paretoRaw = Object.entries(defectCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const paretoTotal = paretoRaw.reduce((s, [, v]) => s + v, 0);
-  let cumPct = 0;
-  const paretoData = paretoRaw.map(([name, count]) => {
-    cumPct += count / paretoTotal * 100;
-    return { name, count, cumPct: parseFloat(cumPct.toFixed(1)) };
-  });
+  const ppKpis = computePostProductionKpis(fBoxes, fRej, PRODUCTION_LINES);
+  const rejectionByLine = ppKpis.rejectionByLine;
 
   const camByLine: Record<string, {
     c1: number[]; c2: number[];
@@ -321,7 +309,7 @@ export default function AnalyticsPage() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-black tracking-wide" style={{ color: TEXT }}>
-            📈 {t("analytics.title")}
+            <AppIcon name="chart" size={22} /> {t("analytics.title")}
           </h1>
           <p className="text-xs mt-1" style={{ color: MUTED }}>
             {t("analytics.monitoring")}: {new Date().toLocaleString("th-TH")}
@@ -401,7 +389,7 @@ export default function AnalyticsPage() {
         {activeTab === 0 && (
           <div className="flex flex-col gap-6">
             <SectionHeader>{t("analytics.q1_title")}</SectionHeader>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3">
               <KpiCard
                 label={t("analytics.kpi_yield")}
                 value={`${yieldPct.toFixed(1)}%`}
@@ -415,16 +403,33 @@ export default function AnalyticsPage() {
                 color={SUCCESS}
               />
               <KpiCard
+                label={t("analytics.kpi_weight_completion")}
+                value={`${ppKpis.weightCompletionPct.toFixed(1)}%`}
+                sub={t("analytics.kpi_weight_completion_sub", {
+                  weighed: ppKpis.weighedBoxes,
+                  graded: ppKpis.gradedBoxes,
+                })}
+                color={kpiColor(ppKpis.weightCompletionPct, 90, 70)}
+              />
+              <KpiCard
+                label={t("analytics.kpi_throughput")}
+                value={ppKpis.throughputBoxes.toLocaleString()}
+                sub={t("analytics.kpi_throughput_sub", {
+                  kg: ppKpis.throughputNetKg.toLocaleString(),
+                })}
+                color={BLUE}
+              />
+              <KpiCard
+                label={t("analytics.kpi_rejection")}
+                value={`${ppKpis.rejectionTotalKg.toFixed(1)}`}
+                sub={t("analytics.kpi_rejection_sub")}
+                color={kpiColor(ppKpis.rejectionTotalKg, 0, 5, true)}
+              />
+              <KpiCard
                 label={t("analytics.kpi_scrap")}
                 value={`${scrapPct.toFixed(1)}%`}
                 sub={t("analytics.kpi_scrap_sub", { count: totalNonAF })}
                 color={kpiColor(scrapPct, 2, 5, true)}
-              />
-              <KpiCard
-                label={t("analytics.kpi_active_lines")}
-                value={`${activeLines}/13`}
-                sub={t("analytics.kpi_active_lines_sub")}
-                color={BLUE}
               />
               <KpiCard
                 label={t("analytics.kpi_backlog")}
@@ -433,10 +438,10 @@ export default function AnalyticsPage() {
                 color={kpiColor(latestBacklog, 0, 5, true)}
               />
               <KpiCard
-                label={t("analytics.kpi_repass")}
-                value={fRepass.length.toLocaleString()}
-                sub={t("analytics.kpi_repass_sub")}
-                color={WARNING}
+                label={t("analytics.kpi_pending_weigh")}
+                value={ppKpis.pendingWeigh.toLocaleString()}
+                sub={t("analytics.kpi_pending_weigh_sub")}
+                color={kpiColor(ppKpis.pendingWeigh, 0, 5, true)}
               />
             </div>
 
@@ -460,7 +465,7 @@ export default function AnalyticsPage() {
                           <>
                             <p className="text-sm font-black" style={{ color }}>{s.af}/{s.tot}</p>
                             <p className="text-xs" style={{ color }}>
-                              {s.scr > 10 ? "⚠️" : s.scr > 3 ? "⚡" : "✅"} {s.scr.toFixed(1)}%
+                              {s.scr.toFixed(1)}%
                             </p>
                             {s.batches && <p className="text-xs truncate mt-0.5" style={{ color: MUTED }}>{s.batches.slice(0, 18)}</p>}
                           </>
@@ -514,58 +519,29 @@ export default function AnalyticsPage() {
 
               <div className="rounded-xl border p-5" style={cardStyle}>
                 <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
-                  {t("analytics.pareto_title")}
+                  {t("analytics.rej_by_line_title")}
                 </p>
                 <p className="text-xs mb-4" style={{ color: MUTED }}>
-                  {t("analytics.pareto_sub", { count: pendingBoxes.length })}
+                  {t("analytics.rej_by_line_sub")}
                 </p>
-                {paretoData.length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <ComposedChart data={paretoData} margin={{ top: 10, right: 40, bottom: 5, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-                        <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                        <YAxis yAxisId="left"  tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                        <YAxis yAxisId="right" orientation="right"
-                               tickFormatter={v => `${v}%`}
-                               tick={{ fill: "#94a3b8", fontSize: 10 }}
-                               domain={[0, 110]} />
-                        <Tooltip
-                          contentStyle={{ background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8 }}
-                          labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
-                          itemStyle={{ color: "#e2e8f0" }}
-                        />
-                        <Bar yAxisId="left" dataKey="count" radius={[4, 4, 0, 0]} name="Quantity">
-                          {paretoData.map((_, i) => (
-                            <Cell key={i} fill={i === 0 ? DANGER : i === 1 ? "#ff6b81" : i < 4 ? WARNING : BLUE} />
-                          ))}
-                        </Bar>
-                        <Line
-                          yAxisId="right"
-                          type="linear"
-                          dataKey="cumPct"
-                          stroke={SUCCESS}
-                          strokeWidth={2.5}
-                          dot={{ r: 4, fill: SUCCESS, strokeWidth: 0 }}
-                          name="Cumulative %"
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                    <div className="grid grid-cols-3 gap-2 mt-4">
-                      {paretoData.slice(0, 3).map((d, i) => (
-                        <div key={i} className="rounded-lg border p-3 text-center"
-                             style={{ borderColor: [DANGER, WARNING, BLUE][i] + "60", background: ELEVATED }}>
-                          <p className="text-lg font-black" style={{ color: [DANGER, WARNING, BLUE][i] }}>#{i + 1}</p>
-                          <p className="text-xs font-bold mt-1" style={{ color: TEXT }}>{d.name}</p>
-                          <p className="text-xs" style={{ color: "#94a3b8" }}>
-                            {d.count} {t("analytics.times")} ({(d.count / paretoTotal * 100).toFixed(1)}%)
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </>
+                {rejectionByLine.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={rejectionByLine} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+                      <XAxis dataKey="line" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                      <Tooltip
+                        {...TOOLTIP_STYLE}
+                        formatter={(v: any) => [`${v} kg`]}
+                      />
+                      <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 11 }} />
+                      <Bar dataKey="ats" name="ATS" stackId="rej" fill={BLUE} />
+                      <Bar dataKey="print" name="Print" stackId="rej" fill={WARNING} />
+                      <Bar dataKey="cam" name="CAM" stackId="rej" fill={DANGER} radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
-                  <p style={{ color: SUCCESS }}>{t("analytics.no_nonaf")}</p>
+                  <p style={{ color: SUCCESS }}>{t("analytics.no_rejection")}</p>
                 )}
               </div>
 

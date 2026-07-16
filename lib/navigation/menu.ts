@@ -1,90 +1,134 @@
 import {
   canAccessMenuItem,
   canAccessSection,
+  canSeeAllDepartments,
   hasFullAccess,
 } from "@/lib/auth/roles";
 import type { UserRole } from "@/lib/auth/types";
+import {
+  DEPARTMENT_SECTION_KEY,
+  type Department,
+} from "@/lib/constants/departments";
+import type { AppIconName } from "@/lib/icons/app-icons";
 
 export type MenuItem = {
   labelKey: string;
-  icon: string;
+  icon: AppIconName;
   href: string;
   roles?: UserRole[];
 };
 
 export type MenuSection = {
   sectionKey: string;
-  icon: string;
+  icon: AppIconName;
   roles?: UserRole[];
   items: MenuItem[];
 };
+
+/** Cross-department links (Phase 3: plan is read-only for all departments). */
+export const GLOBAL_MENU_ITEMS: MenuItem[] = [
+  { labelKey: "dashboard.plan", icon: "calendar", href: "/plan" },
+];
 
 /** Single source of truth for sidebar + dashboard navigation. */
 export const APP_MENU: MenuSection[] = [
   {
     sectionKey: "nav.planner",
-    roles: ["admin", "supervisor", "planner"],
-    icon: "🗓️",
-    items: [{ labelKey: "dashboard.plan", icon: "🗓️", href: "/plan" }],
+    roles: ["admin", "supervisor", "manager", "planner"],
+    icon: "calendar",
+    items: [
+      { labelKey: "dashboard.planner_dash", icon: "chart", href: "/dashboard/planner" },
+    ],
   },
   {
     sectionKey: "nav.quality",
-    icon: "🔍",
-    roles: ["admin", "supervisor", "qc_technician"],
-    items: [{ labelKey: "dashboard.qc_form", icon: "🔍", href: "/quality" }],
+    icon: "scan",
+    roles: ["admin", "supervisor", "manager", "qc_technician"],
+    items: [
+      { labelKey: "dashboard.quality_dash", icon: "chart", href: "/dashboard/quality" },
+      { labelKey: "dashboard.qc_form", icon: "scan", href: "/quality" },
+      { labelKey: "dashboard.box_grade", icon: "badgeCheck", href: "/quality/grade" },
+    ],
   },
   {
     sectionKey: "nav.production",
-    icon: "🏭",
-    roles: ["admin", "supervisor", "production_operator"],
-    items: [],
+    icon: "factory",
+    roles: ["admin", "supervisor", "manager", "production_operator"],
+    items: [
+      { labelKey: "dashboard.production_dash", icon: "chart", href: "/dashboard/production" },
+    ],
   },
   {
     sectionKey: "nav.post_production",
-    roles: ["admin", "supervisor", "operator"],
-    icon: "📦",
+    roles: ["admin", "supervisor", "manager", "operator"],
+    icon: "package",
     items: [
-      { labelKey: "dashboard.box_status", icon: "📦", href: "/record" },
-      { labelKey: "dashboard.rejection", icon: "🗑️", href: "/rejection" },
-      { labelKey: "dashboard.backlog", icon: "⏳", href: "/backlog" },
-      { labelKey: "dashboard.camera", icon: "📷", href: "/camera", roles: ["admin", "supervisor"] },
-      { labelKey: "dashboard.repass", icon: "🔄", href: "/repass", roles: ["admin", "supervisor"] },
-      { labelKey: "dashboard.analytics", icon: "📈", href: "/analytics", roles: ["admin", "supervisor"] },
+      { labelKey: "dashboard.post_dash", icon: "chart", href: "/analytics" },
+      { labelKey: "dashboard.box_status", icon: "boxes", href: "/record" },
+      { labelKey: "dashboard.batch_detail", icon: "search", href: "/boxes" },
+      { labelKey: "dashboard.rejection", icon: "ban", href: "/rejection" },
+      { labelKey: "dashboard.backlog", icon: "clock", href: "/backlog" },
+      { labelKey: "dashboard.camera", icon: "camera", href: "/camera", roles: ["admin", "supervisor", "manager"] },
+      { labelKey: "dashboard.repass", icon: "refresh", href: "/repass", roles: ["admin", "supervisor", "manager"] },
     ],
   },
   {
     sectionKey: "nav.warehouse",
-    icon: "🏗️",
-    roles: ["admin", "supervisor", "warehouse_operator"],
+    icon: "warehouse",
+    roles: ["admin", "supervisor", "manager", "warehouse_operator"],
     items: [],
   },
   {
     sectionKey: "nav.human_resources",
-    icon: "🧑",
-    roles: ["admin", "supervisor"],
+    icon: "users",
+    roles: ["admin", "supervisor", "manager"],
     items: [],
   },
   {
     sectionKey: "nav.account",
-    icon: "💰",
-    roles: ["admin", "supervisor"],
+    icon: "wallet",
+    roles: ["admin", "supervisor", "manager"],
     items: [],
   },
   {
     sectionKey: "nav.user",
-    icon: "👥",
+    icon: "userCog",
     roles: ["admin"],
-    items: [{ labelKey: "dashboard.user_account", icon: "👥", href: "/user", roles: ["admin"] }],
+    items: [{ labelKey: "dashboard.user_account", icon: "userCog", href: "/user", roles: ["admin"] }],
   },
 ];
 
-export function getVisibleSections(role: UserRole): MenuSection[] {
-  return APP_MENU.filter((section) => {
+export function getVisibleSections(
+  role: UserRole,
+  department?: Department | null,
+): MenuSection[] {
+  const byRole = APP_MENU.filter((section) => {
     if (section.sectionKey === "nav.user") {
       return section.roles?.includes(role) ?? false;
     }
     return hasFullAccess(role) || canAccessSection(section.roles, role);
   });
+
+  // admin / manager → every department
+  if (canSeeAllDepartments(role)) {
+    return byRole;
+  }
+
+  // supervisor (and others): only own department when set
+  if (department) {
+    const ownSection = DEPARTMENT_SECTION_KEY[department];
+    return byRole.filter(
+      (section) =>
+        section.sectionKey === ownSection || section.sectionKey === "nav.user",
+    );
+  }
+
+  // supervisor without department → do not expose all sections
+  if (role === "supervisor") {
+    return [];
+  }
+
+  return byRole;
 }
 
 export function getVisibleMenuItems(section: MenuSection, role: UserRole): MenuItem[] {

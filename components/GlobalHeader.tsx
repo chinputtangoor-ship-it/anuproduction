@@ -33,7 +33,7 @@ export function GlobalHeader() {
             className="text-[10px] font-medium uppercase tracking-widest"
             style={{ color: "var(--color-anu-glow)" }}
           >
-            The Quantum Core
+            ANU Production
           </p>
           <p className="text-lg font-bold leading-none" style={{ color: "var(--color-anu-text)" }}>
             ANU

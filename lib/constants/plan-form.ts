@@ -1,4 +1,5 @@
 import { CUSTOMER_NAMES, COUNTRIES, METAL_OPTIONS, BOX_PACKING, INK_OPTIONS } from "@/lib/constants/plan-options";
+import { withCreatedBy } from "@/lib/audit/stamp";
 
 export const BATCH_STATUS = ["Planing", "Running", "Finished"] as const;
 
@@ -114,7 +115,7 @@ export function planFormToPayload(form: PlanFormValues, userId?: string) {
     ink_body: form.ink_body || null,
     roller_des_body: form.roller_des_body || null,
     batch_status: form.batch_status,
-    ...(userId ? { created_by: userId, updated_by: userId } : {}),
+    ...withCreatedBy({}, userId),
   };
 }
 

@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { AppIcon } from "@/components/AppIcon";
 import { ProductionFlowShell } from "@/components/ProductionFlowShell";
 import { emptyQcFormValues, QC_SECTIONS } from "@/lib/constants/qc-form";
 import { fetchNextQcBoxNumber } from "@/lib/data/qc";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { withRecordedBy } from "@/lib/audit/stamp";
 
 export default function QualityPage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -52,14 +54,18 @@ export default function QualityPage() {
     }
 
     setSaving(true);
-    const { error } = await supabase.from("qc_inspection").insert([{
-      line,
-      batch,
-      box_number: nextBox,
-      form_data: values,
-      inspected_by: user.fullname,
-      recorded_by: user.id,
-    }]);
+    const { error } = await supabase.from("qc_inspection").insert([
+      withRecordedBy(
+        {
+          line,
+          batch,
+          box_number: nextBox,
+          form_data: values,
+          inspected_by: user.id,
+        },
+        user.id,
+      ),
+    ]);
 
     if (error) {
       alert(error.message);
@@ -86,7 +92,7 @@ export default function QualityPage() {
   return (
     <ProductionFlowShell
       title={t("quality.title")}
-      titleIcon="🔍"
+      titleIcon="scan"
       noBatchKey="quality.no_batch"
       lineCols={6}
       batchCols={4}
@@ -165,7 +171,7 @@ export default function QualityPage() {
                       borderLeft: isActive ? `3px solid ${sec.color}` : "3px solid transparent",
                     }}
                   >
-                    <span className="text-base">{sec.icon}</span>
+                    <AppIcon name={sec.icon} size={16} />
                     <span className="flex-1">{t(`quality.sections.${sec.id}`)}</span>
                     {allDone && <span className="text-green-400 text-xs">✓</span>}
                     {!allDone && secFilled > 0 && (
@@ -185,10 +191,10 @@ export default function QualityPage() {
                   style={{ borderBottom: "1px solid var(--color-anu-border)" }}
                 >
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                    style={{ background: `${activeSec.color}22` }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: `${activeSec.color}22`, color: activeSec.color }}
                   >
-                    {activeSec.icon}
+                    <AppIcon name={activeSec.icon} size={20} />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>

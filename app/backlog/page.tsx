@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { ProductionFlowShell } from "@/components/ProductionFlowShell";
+import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
@@ -71,17 +72,22 @@ export default function BacklogPage() {
 
   async function handleSave(line: string, batch: string) {
     if (hasError) return;
+    if (!user?.id) return;
 
     setSaving(true);
-    const { error } = await supabase.from("backlog").insert([{
-      line,
-      batch,
-      ats_box: finalAts,
-      print_box: finalPrint,
-      cam_box: finalCam,
-      record_by: user?.fullname,
-      recorded_by: user?.id,
-    }]);
+    const { error } = await supabase.from("backlog").insert([
+      withRecordedBy(
+        {
+          line,
+          batch,
+          ats_box: finalAts,
+          print_box: finalPrint,
+          cam_box: finalCam,
+          record_by: user.id,
+        },
+        user.id,
+      ),
+    ]);
 
     if (error) {
       alert(error.message);
@@ -135,7 +141,7 @@ export default function BacklogPage() {
   return (
     <ProductionFlowShell
       title={t("backlog.title")}
-      titleIcon="⏳"
+      titleIcon="clock"
       noBatchKey="backlog.no_batch"
       onBatchReady={handleBatchReady}
     >

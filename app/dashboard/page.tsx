@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { AppIcon } from "@/components/AppIcon";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { getVisibleMenuItems, getVisibleSections } from "@/lib/navigation/menu";
+import {
+  GLOBAL_MENU_ITEMS,
+  getVisibleMenuItems,
+  getVisibleSections,
+} from "@/lib/navigation/menu";
 import { useI18n } from "@/lib/i18n/context";
 
 export default function DashboardPage() {
@@ -12,7 +17,7 @@ export default function DashboardPage() {
 
   if (loading || !user) return null;
 
-  const visibleSections = getVisibleSections(user.role);
+  const visibleSections = getVisibleSections(user.role, user.department);
 
   return (
     <div
@@ -28,16 +33,51 @@ export default function DashboardPage() {
         </h2>
         <p className="text-sm mt-1" style={{ color: "var(--color-anu-glow)" }}>
           {user.role}
+          {user.department ? ` · ${t(`department.${user.department}`)}` : ""}
         </p>
       </div>
 
       <div className="flex flex-col gap-10">
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <AppIcon name="calendar" size={16} className="opacity-70" />
+            <p
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "var(--color-anu-muted)" }}
+            >
+              {t("dashboard.shared")}
+            </p>
+            <div className="flex-1 h-px" style={{ background: "var(--color-anu-border)" }} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+            {GLOBAL_MENU_ITEMS.map((item) => (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className="rounded-xl border p-6 text-left transition hover:scale-[1.02] hover:border-purple-500"
+                style={{
+                  background: "var(--color-anu-surface)",
+                  borderColor: "var(--color-anu-border)",
+                }}
+              >
+                <div className="mb-3" style={{ color: "var(--color-anu-glow)" }}>
+                  <AppIcon name={item.icon} size={32} />
+                </div>
+                <div className="font-semibold text-base" style={{ color: "var(--color-anu-text)" }}>
+                  {t(item.labelKey)}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {visibleSections.map((section) => {
           const visibleItems = getVisibleMenuItems(section, user.role);
 
           return (
             <div key={section.sectionKey}>
               <div className="flex items-center gap-3 mb-4">
+                <AppIcon name={section.icon} size={16} className="opacity-70" />
                 <p
                   className="text-xs font-semibold uppercase tracking-widest"
                   style={{ color: "var(--color-anu-muted)" }}
@@ -59,7 +99,9 @@ export default function DashboardPage() {
                         borderColor: "var(--color-anu-border)",
                       }}
                     >
-                      <div className="text-4xl mb-3">{item.icon}</div>
+                      <div className="mb-3" style={{ color: "var(--color-anu-glow)" }}>
+                        <AppIcon name={item.icon} size={32} />
+                      </div>
                       <div className="font-semibold text-base" style={{ color: "var(--color-anu-text)" }}>
                         {t(item.labelKey)}
                       </div>

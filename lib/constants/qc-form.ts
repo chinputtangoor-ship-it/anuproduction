@@ -1,3 +1,5 @@
+import type { AppIconName } from "@/lib/icons/app-icons";
+
 export type QcFieldDef = {
   key: string;
   unit?: string;
@@ -7,7 +9,7 @@ export type QcFieldDef = {
 
 export type QcSectionDef = {
   id: string;
-  icon: string;
+  icon: AppIconName;
   color: string;
   fields: QcFieldDef[];
 };
@@ -15,7 +17,7 @@ export type QcSectionDef = {
 export const QC_SECTIONS: QcSectionDef[] = [
   {
     id: "dimension",
-    icon: "📐",
+    icon: "ruler",
     color: "#7C5CFF",
     fields: [
       { key: "dim_length", unit: "mm", type: "number" },
@@ -25,7 +27,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
   },
   {
     id: "outside_dimension",
-    icon: "📏",
+    icon: "maximize",
     color: "#4EA8DE",
     fields: [
       { key: "out_length", unit: "mm", type: "number" },
@@ -35,7 +37,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
   },
   {
     id: "thickness",
-    icon: "🔲",
+    icon: "square",
     color: "#F59E0B",
     fields: [
       { key: "thk_top", unit: "mm", type: "number" },
@@ -46,7 +48,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
   },
   {
     id: "cut_length",
-    icon: "✂️",
+    icon: "scissors",
     color: "#10B981",
     fields: [
       { key: "cut_a", unit: "mm", type: "number" },
@@ -55,7 +57,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
   },
   {
     id: "weight",
-    icon: "⚖️",
+    icon: "scale",
     color: "#EC4899",
     fields: [
       { key: "weight_gross", unit: "g", type: "number" },
@@ -64,7 +66,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
   },
   {
     id: "attribute",
-    icon: "🏷️",
+    icon: "tag",
     color: "#8B5CF6",
     fields: [
       { key: "attr_color", type: "text" },
@@ -74,7 +76,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
   },
   {
     id: "defect",
-    icon: "⚠️",
+    icon: "alert",
     color: "#EF4444",
     fields: [
       { key: "defect_type", type: "text" },

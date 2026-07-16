@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { AppIcon } from "@/components/AppIcon";
 
 const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"];
 const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
@@ -132,21 +134,26 @@ export default function RepassPage() {
       alert(t("repass.alert_specify_defect", { status: resultStatus }));
       return;
     }
+    if (!user?.id) return;
 
     setSaving(true);
-    await supabase.from("repass").insert([{
-      line, batch,
-      box_number: boxNum,
-      previous_status: prevStatus,
-      result_status: resultStatus,
-      new_defects: needDefect ? newDefects.join(",") : null,
-      type: mode,
-      reason: resultStatus === "AF" ? t("repass.reason_normal") : reason,
-      start_time: `${startDate}T${startTime}:00`,
-      complete_time: endTime ? `${endDate}T${endTime}:00` : null,
-      repass_by: user?.fullname,
-      recorded_by: user?.id,
-    }]);
+    await supabase.from("repass").insert([
+      withRecordedBy(
+        {
+          line, batch,
+          box_number: boxNum,
+          previous_status: prevStatus,
+          result_status: resultStatus,
+          new_defects: needDefect ? newDefects.join(",") : null,
+          type: mode,
+          reason: resultStatus === "AF" ? t("repass.reason_normal") : reason,
+          start_time: `${startDate}T${startTime}:00`,
+          complete_time: endTime ? `${endDate}T${endTime}:00` : null,
+          repass_by: user.id,
+        },
+        user.id,
+      ),
+    ]);
 
     if (!isOther) {
       await supabase.from("boxes").update({
@@ -205,17 +212,17 @@ export default function RepassPage() {
             else if (step === "batch") { setStep("line"); setSelBatch(""); }
             else router.push("/dashboard");
           }} className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {step === "view" || step === "line" ? t("repass.home") : t("repass.back")}
+            <AppIcon name="arrowLeft" size={14} /> {step === "view" || step === "line" ? t("repass.home") : t("repass.back")}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            🔄 {t("repass.title")}
+            <AppIcon name="refresh" size={22} /> {t("repass.title")}
           </h1>
           <button onClick={() => { setStep("view"); loadViewData(); }}
             className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition"
             style={step === "view"
               ? { background: "var(--color-anu-accent)", color: "#fff", borderColor: "var(--color-anu-accent)" }
               : cardStyle}>
-            📋 {t("repass.view_info")}
+            <AppIcon name="clipboard" size={14} /> {t("repass.view_info")}
           </button>
         </div>
 

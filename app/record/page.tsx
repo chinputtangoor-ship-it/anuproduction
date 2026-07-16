@@ -2,13 +2,14 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppIcon } from "@/components/AppIcon";
 import { ProductionFlowShell } from "@/components/ProductionFlowShell";
+import { STATUS_COLORS } from "@/lib/constants/production";
 import {
-  BOX_STATUS,
-  DEFECT_LIST,
-  STATUS_COLORS,
-  STATUSES_WITHOUT_DEFECT,
-} from "@/lib/constants/production";
+  fetchPendingWeighBoxes,
+  fetchProfileNames,
+  type GradedBox,
+} from "@/lib/data/boxes";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
@@ -18,49 +19,47 @@ export default function RecordPage() {
   const { t } = useI18n();
   const { user, loading } = useRequireAuth();
 
-  const [nextBox, setNextBox] = useState(1);
-  const [status, setStatus] = useState("AF");
-  const [defects, setDefects] = useState<string[]>([]);
+  const [pending, setPending] = useState<GradedBox[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [netWeight, setNetWeight] = useState("");
   const [totalWeight, setTotalWeight] = useState("");
-  const [checkBy, setCheckBy] = useState("");
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState("");
+  const [loadingBoxes, setLoadingBoxes] = useState(false);
 
-  const needDefect = !STATUSES_WITHOUT_DEFECT.includes(status as typeof STATUSES_WITHOUT_DEFECT[number]);
   const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
+  const selected = pending.find((b) => b.id === selectedId) ?? null;
 
-  const loadNextBox = useCallback(async (batch: string) => {
-    const { data } = await supabase
-      .from("boxes")
-      .select("box_number")
-      .eq("batch", batch)
-      .order("box_number", { ascending: false })
-      .limit(1);
-
-    setNextBox(data && data.length > 0 ? data[0].box_number + 1 : 1);
-  }, []);
-
-  const resetForm = useCallback(() => {
-    setStatus("AF");
-    setDefects([]);
-    setNetWeight("");
-    setTotalWeight("");
-    setCheckBy("");
-    setLastSaved("");
+  const loadPending = useCallback(async (batch: string) => {
+    setLoadingBoxes(true);
+    try {
+      const rows = await fetchPendingWeighBoxes(batch);
+      setPending(rows);
+      setSelectedId(rows[0]?.id ?? null);
+      setNetWeight("");
+      setTotalWeight("");
+      const ids = rows.map((r) => r.check_by).filter(Boolean) as string[];
+      setNames(await fetchProfileNames(ids));
+    } catch {
+      setPending([]);
+      setSelectedId(null);
+    } finally {
+      setLoadingBoxes(false);
+    }
   }, []);
 
   const handleBatchReady = useCallback(
     (_line: string, batch: string) => {
-      resetForm();
-      loadNextBox(batch);
+      setLastSaved("");
+      loadPending(batch);
     },
-    [loadNextBox, resetForm],
+    [loadPending],
   );
 
-  async function handleSave(line: string, batch: string) {
-    if (needDefect && defects.length === 0) {
-      alert(t("record.alert_no_defect"));
+  async function handleSave(batch: string) {
+    if (!selected) {
+      alert(t("record.alert_no_box"));
       return;
     }
     if (!netWeight || parseFloat(netWeight) <= 0) {
@@ -71,24 +70,20 @@ export default function RecordPage() {
       alert(t("record.alert_no_total_weight"));
       return;
     }
-    if (!checkBy.trim()) {
-      alert(t("record.alert_no_checker"));
+    if (!user?.id) {
+      alert(t("common.error"));
       return;
     }
 
     setSaving(true);
-    const { error } = await supabase.from("boxes").insert([{
-      line,
-      batch,
-      box_number: nextBox,
-      status,
-      defects: defects.join(",") || null,
-      net_weight_kg: parseFloat(netWeight),
-      total_weight_kg: parseFloat(totalWeight),
-      weight_by: user?.fullname,
-      check_by: checkBy.trim(),
-      recorded_by: user?.id,
-    }]);
+    const { error } = await supabase
+      .from("boxes")
+      .update({
+        net_weight_kg: parseFloat(netWeight),
+        total_weight_kg: parseFloat(totalWeight),
+        weight_by: user.id,
+      })
+      .eq("id", selected.id);
 
     if (error) {
       alert(error.message);
@@ -96,12 +91,12 @@ export default function RecordPage() {
       return;
     }
 
-    setLastSaved(t("record.saved_msg", { box: nextBox, status }));
-    setNextBox((n) => n + 1);
-    setStatus("AF");
-    setDefects([]);
+    setLastSaved(
+      t("record.saved_msg", { box: selected.box_number, status: selected.status }),
+    );
     setNetWeight("");
     setTotalWeight("");
+    await loadPending(batch);
     setSaving(false);
   }
 
@@ -110,179 +105,197 @@ export default function RecordPage() {
   return (
     <ProductionFlowShell
       title={t("record.title")}
-      titleIcon="📦"
+      titleIcon="package"
       noBatchKey="record.no_batch"
       lineCols={6}
       batchCols={4}
       onBatchReady={handleBatchReady}
       headerExtra={
         <button
+          type="button"
           onClick={() => router.push("/boxes")}
-          className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition hover:opacity-80"
+          className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition hover:opacity-80 inline-flex items-center gap-1.5"
           style={cardStyle}
         >
-          📋 {t("common.view_info")}
+          <AppIcon name="clipboard" size={14} />
+          {t("common.view_info")}
         </button>
       }
     >
-      {({ line, batch }) => (
+      {({ batch }) => (
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border p-4 text-center" style={cardStyle}>
-            <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-              {t("record.current_box")}
-            </p>
-            <p className="text-5xl font-black" style={{ color: "var(--color-anu-accent)" }}>
-              #{nextBox}
-            </p>
-          </div>
-
           <div className="rounded-xl border p-4" style={cardStyle}>
-            <p className="text-xs mb-3" style={{ color: "var(--color-anu-muted)" }}>
-              {t("record.box_status")}
+            <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
+              {t("record.pending_queue")}
             </p>
-            <div className="grid grid-cols-4 gap-2">
-              {BOX_STATUS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    setStatus(s);
-                    setDefects([]);
-                  }}
-                  className="py-3 rounded-lg text-sm font-bold border-2 transition hover:scale-105"
-                  style={{
-                    borderColor: status === s ? STATUS_COLORS[s] : "transparent",
-                    background: status === s ? `${STATUS_COLORS[s]}20` : "var(--color-anu-elevated)",
-                    color: status === s ? STATUS_COLORS[s] : "var(--color-anu-muted)",
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            {loadingBoxes ? (
+              <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>{t("common.loading")}</p>
+            ) : pending.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--color-anu-muted)" }}>
+                {t("record.no_pending_grade")}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {pending.map((box) => {
+                  const active = box.id === selectedId;
+                  const color = STATUS_COLORS[box.status] ?? "var(--color-anu-muted)";
+                  return (
+                    <button
+                      key={box.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(box.id);
+                        setNetWeight("");
+                        setTotalWeight("");
+                      }}
+                      className="rounded-lg border px-3 py-3 text-left transition"
+                      style={{
+                        borderColor: active ? color : "var(--color-anu-border)",
+                        background: active ? `${color}18` : "var(--color-anu-elevated)",
+                      }}
+                    >
+                      <p className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>
+                        #{box.box_number}
+                      </p>
+                      <p className="text-xs font-semibold mt-1" style={{ color }}>
+                        {box.status}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {needDefect && (
-            <div className="rounded-xl border p-4" style={cardStyle}>
-              <p className="text-xs mb-3" style={{ color: "var(--color-anu-danger)" }}>
-                {t("record.defect_required")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {DEFECT_LIST.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() =>
-                      setDefects((prev) =>
-                        prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
-                      )
-                    }
-                    className="px-3 py-1.5 rounded-full text-xs font-medium border transition"
+          {selected && (
+            <>
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <p className="text-xs mb-3 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                  {t("record.from_qc")}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span
+                    className="px-3 py-1.5 rounded-full text-sm font-bold"
                     style={{
-                      background: defects.includes(d) ? "rgba(255,71,87,0.2)" : "var(--color-anu-elevated)",
-                      borderColor: defects.includes(d) ? "var(--color-anu-danger)" : "var(--color-anu-border)",
-                      color: defects.includes(d) ? "var(--color-anu-danger)" : "var(--color-anu-muted)",
+                      background: `${STATUS_COLORS[selected.status] ?? "#64748b"}22`,
+                      color: STATUS_COLORS[selected.status] ?? "var(--color-anu-muted)",
                     }}
                   >
-                    {d}
-                  </button>
-                ))}
+                    {selected.status}
+                  </span>
+                  {(selected.defects ? selected.defects.split(",").filter(Boolean) : []).map((d) => (
+                    <span
+                      key={d}
+                      className="px-3 py-1.5 rounded-full text-xs border"
+                      style={{
+                        borderColor: "var(--color-anu-danger)",
+                        color: "var(--color-anu-danger)",
+                        background: "rgba(255,71,87,0.1)",
+                      }}
+                    >
+                      {d}
+                    </span>
+                  ))}
+                  {!selected.defects && (
+                    <span className="text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("record.no_defect")}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                  {t("record.check_by")}:{" "}
+                  <span style={{ color: "var(--color-anu-text)" }}>
+                    {(selected.check_by && names[selected.check_by]) || selected.check_by || "-"}
+                  </span>
+                </p>
               </div>
-            </div>
-          )}
 
-          <div className="rounded-xl border p-4" style={cardStyle}>
-            <p
-              className="text-xs mb-3 uppercase tracking-wider font-medium"
-              style={{ color: "var(--color-anu-muted)" }}
-            >
-              {t("record.weight_section")}
-            </p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-                  {t("record.net_weight")}
-                </p>
-                <input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  value={netWeight}
-                  onChange={(e) => setNetWeight(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none text-right"
-                  style={{
-                    background: "var(--color-anu-elevated)",
-                    borderColor: "var(--color-anu-border)",
-                    color: "var(--color-anu-text)",
-                  }}
-                />
-              </div>
-              <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-                  {t("record.total_weight")}
-                </p>
-                <input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  value={totalWeight}
-                  onChange={(e) => setTotalWeight(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none text-right"
-                  style={{
-                    background: "var(--color-anu-elevated)",
-                    borderColor: "var(--color-anu-border)",
-                    color: "var(--color-anu-text)",
-                  }}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-                  {t("record.weigh_by")}
-                </p>
-                <div
-                  className="rounded-lg border px-3 py-2.5 text-sm"
-                  style={{
-                    background: "var(--color-anu-void)",
-                    borderColor: "var(--color-anu-border)",
-                    color: "var(--color-anu-muted)",
-                  }}
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <p
+                  className="text-xs mb-3 uppercase tracking-wider font-medium"
+                  style={{ color: "var(--color-anu-muted)" }}
                 >
-                  {user.fullname || "-"}
+                  {t("record.weight_section")}
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("record.net_weight")}
+                    </p>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={netWeight}
+                      onChange={(e) => setNetWeight(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none text-right"
+                      style={{
+                        background: "var(--color-anu-elevated)",
+                        borderColor: "var(--color-anu-border)",
+                        color: "var(--color-anu-text)",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("record.total_weight")}
+                    </p>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={totalWeight}
+                      onChange={(e) => setTotalWeight(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none text-right"
+                      style={{
+                        background: "var(--color-anu-elevated)",
+                        borderColor: "var(--color-anu-border)",
+                        color: "var(--color-anu-text)",
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                    {t("record.weigh_by")}
+                  </p>
+                  <div
+                    className="rounded-lg border px-3 py-2.5 text-sm"
+                    style={{
+                      background: "var(--color-anu-void)",
+                      borderColor: "var(--color-anu-border)",
+                      color: "var(--color-anu-muted)",
+                    }}
+                  >
+                    {user.fullname || "-"}
+                  </div>
                 </div>
               </div>
-              <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
-                  {t("record.check_by")}
+
+              {lastSaved && (
+                <p className="text-sm text-center" style={{ color: "var(--color-anu-success)" }}>
+                  {lastSaved}
                 </p>
-                <input
-                  type="text"
-                  value={checkBy}
-                  onChange={(e) => setCheckBy(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
-                  style={{
-                    background: "var(--color-anu-elevated)",
-                    borderColor: "var(--color-anu-border)",
-                    color: "var(--color-anu-text)",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+              )}
 
-          {lastSaved && (
-            <p className="text-sm text-center" style={{ color: "var(--color-anu-success)" }}>
-              {lastSaved}
-            </p>
+              <button
+                type="button"
+                onClick={() => handleSave(batch)}
+                disabled={saving}
+                className="py-4 rounded-xl text-base font-bold transition hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                style={{ background: "var(--color-anu-accent)", color: "#fff" }}
+              >
+                {saving ? (
+                  t("common.saving")
+                ) : (
+                  <>
+                    <AppIcon name="save" size={18} />
+                    {t("record.save_box")} #{selected.box_number}
+                  </>
+                )}
+              </button>
+            </>
           )}
-
-          <button
-            onClick={() => handleSave(line, batch)}
-            disabled={saving}
-            className="py-4 rounded-xl text-base font-bold transition hover:opacity-90 disabled:opacity-50"
-            style={{ background: "var(--color-anu-accent)", color: "#fff" }}
-          >
-            {saving ? t("common.saving") : `💾 ${t("record.save_box")} #${nextBox}`}
-          </button>
         </div>
       )}
     </ProductionFlowShell>

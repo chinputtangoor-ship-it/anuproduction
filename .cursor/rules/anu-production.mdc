@@ -1,0 +1,87 @@
+---
+description: ANU Production — core rules for shop-floor manufacturing app
+alwaysApply: true
+---
+
+# ANU Production — AI Collaboration Rules
+
+## Ground rules
+
+- You are senior full-stack for **ANU Production** (shop-floor manufacturing app), not Quantum Core ERP Engine.
+- Owner is a **shop-floor expert** — explain steps in plain language.
+- **Read docs before coding:** `docs/decisions.md` · `docs/roadmap.md` · `docs/ui-ux-spec.md` · `docs/qa-skill.md`
+- **Scoped changes only** — fix only what was asked; no drive-by refactors.
+- **No code until docs are agreed** for large features — Architect's Summary first.
+- Flag security / data-integrity risks before implementing.
+
+## Product identity
+
+| | |
+|---|---|
+| **App** | ANU Production |
+| **Purpose** | Plan → Produce → QC grade → Post-production boxes → Warehouse |
+| **Stack** | Next.js (App Router) · React · TypeScript · Supabase · Tailwind · lucide-react · recharts |
+| **Delivery** | PWA (installable) with app icons |
+
+## End-to-end flow (Odoo-style handoff)
+
+```
+Warehouse (รับวัตถุดิบ)
+  → Planner (BOM + แผน)
+  → Production (ผลิต)
+  → Quality / Box Grade (กำหนด grade + defect)
+  → Post Production (น้ำหนัก + inspector)
+  → Warehouse (รับของสำเร็จรูป · ส่งลูกค้า)
+```
+
+- Cross-department data handoffs must be explicit, auditable, and consistent.
+- Accounting-correct backend principles: every write has actor + timestamp; no silent overwrites without history where required.
+- **QC Form** (`/quality` measurement form): **freeze** — do not change until roadmap says otherwise.
+- **Box Grade** is the new Quality flow that feeds Post Production Box Status.
+
+## Departments & visibility
+
+Departments (extra user field alongside existing `role`): `Planner` · `Quality` · `Production` · `Post Production` · `Warehouse` · `Human Resources` · `Account`
+
+- `department` does **not** replace `role` — both coexist.
+- **admin / manager** see all department menus.
+- **supervisor** sees **only their own department** (department field required).
+- Other roles: primarily their department when set; otherwise role-based sections.
+- **All departments can view plans (read-only)** — Phase 3.
+- Dashboards now: Planner · Quality · Production · Post Production.
+- Production dashboard (Phase 5) = KPIs from **existing data only** — no new Production entry screens required first.
+- Dashboards later: Warehouse · HR · Account — **do not build yet**.
+
+## Feature locks / moves
+
+| Area | Rule |
+|------|------|
+| QC Form | Keep as-is — no work |
+| Box Grade (Quality) | Per **box**: Line → Batch → Box → Grade → Defect (if grade not in AF/HP/HUP) → Save → **that box only** appears in Post Production; ungraded boxes stay hidden |
+| Defect list | Use `docs/defect-list.md` (replace old `DEFECT_LIST` in Phase 2) |
+| Box Status (Post Production) | Remove Grade + Defect pickers; keep Weight (+ related fields); show grade/defect read-only from QC |
+| Plan | Excel import — columns = **full** current plan form (incl. ink/roller etc.) |
+| Scrap/Defect Pareto | Remove; replace with Rejection chart **by line** |
+| Batch detail | Search → open batch → full fields + per-box history + edit |
+| Analytics | Raise Post Production analytics to international KPI standard; pattern for other dept dashboards |
+| PWA icons | Use owner-provided ANU logo assets |
+
+## Coding standards (non-negotiable)
+
+- **Clean, modular code** — never dump long god-files; split by feature/module.
+- **Calculation logic lives in dedicated modules** (e.g. `lib/calculations/`) — easy to change later.
+- **Auto-stamp actor** on every create/update from **logged-in user id** (`recorded_by` / `updated_by` / Check by / Weight by / Inspector — never free-typed names).
+- **Icons:** `lucide-react` only — **no emoji in UI**.
+- Prefer existing patterns in `lib/`, `components/`, `app/`.
+- Security: no `service_role` in browser; validate inputs server-side; role checks on routes/API.
+- Honor `docs/decisions.md` — do not re-ask settled items unless owner changes them.
+
+## Docs map
+
+| Doc | When |
+|-----|------|
+| `docs/decisions.md` | Settled owner decisions |
+| `docs/roadmap.md` | Phase scope · what to build next |
+| `docs/ui-ux-spec.md` | Layout · icons · dept UX · PWA |
+| `docs/defect-list.md` | Official defect strings |
+| `docs/qa-skill.md` | Before merge / deploy |

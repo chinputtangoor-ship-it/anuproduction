@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { usernameToAuthEmail } from "@/lib/auth/email";
 import { isValidUsername, sanitizeUsername } from "@/lib/auth/username";
 import type { UserRole } from "@/lib/auth/types";
+import { DEPARTMENTS, isDepartment } from "@/lib/constants/departments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
 
@@ -24,6 +25,13 @@ function adminConfigError(error: unknown) {
   return message;
 }
 
+function parseDepartment(raw: unknown): string | null | "__invalid__" {
+  if (raw == null || raw === "") return null;
+  const value = String(raw);
+  if (!isDepartment(value)) return "__invalid__";
+  return value;
+}
+
 async function requireAdmin() {
   const { profile } = await getSessionProfile();
   if (!profile || profile.role !== "admin" || !profile.is_active) {
@@ -43,7 +51,7 @@ export async function GET() {
     const { data, error } = await admin
       .from("profiles")
       .select(
-        "id, username, fullname, emp_id, role, birth_date, join_date, must_change_password, is_active, created_at",
+        "id, username, fullname, emp_id, role, department, birth_date, join_date, must_change_password, is_active, created_at",
       )
       .order("fullname");
 
@@ -68,6 +76,7 @@ export async function POST(request: Request) {
   const username = sanitizeUsername(String(body.username ?? ""));
   const password = String(body.password ?? "");
   const role = String(body.role ?? "operator") as UserRole;
+  const department = parseDepartment(body.department);
 
   if (!fullname || !username || !password) {
     return NextResponse.json(
@@ -85,6 +94,13 @@ export async function POST(request: Request) {
 
   if (!ROLES.includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  }
+
+  if (department === "__invalid__") {
+    return NextResponse.json(
+      { error: `Invalid department. Allowed: ${DEPARTMENTS.join(", ")}` },
+      { status: 400 },
+    );
   }
 
   try {
@@ -109,6 +125,7 @@ export async function POST(request: Request) {
       fullname,
       emp_id: body.emp_id?.trim() || null,
       role,
+      department,
       birth_date: body.birth_date || null,
       join_date: body.join_date || null,
       must_change_password: true,

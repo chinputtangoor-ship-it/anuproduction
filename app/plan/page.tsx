@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlanFormFields } from "@/components/plan/PlanFormFields";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { canEditPlan } from "@/lib/auth/plan-access";
 import {
   emptyPlanForm,
   planFormToPayload,
   planToFormValues,
   type PlanFormValues,
 } from "@/lib/constants/plan-form";
+import {
+  downloadPlanTemplate,
+  parsePlanExcelFile,
+  planFormsToPayloads,
+  type PlanImportRowError,
+} from "@/lib/plan/excel";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { AppIcon } from "@/components/AppIcon";
 
 export default function PlanPage() {
   const router = useRouter();
@@ -27,6 +35,12 @@ export default function PlanPage() {
   const [form, setForm] = useState<PlanFormValues>(emptyPlanForm);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [importErrors, setImportErrors] = useState<PlanImportRowError[]>([]);
+  const [importMessage, setImportMessage] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canEdit = user ? canEditPlan(user.role) : false;
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -110,6 +124,56 @@ export default function PlanPage() {
     setEditingPlan({ id: plan.id, form: planToFormValues(plan) });
   }
 
+  async function handleBulkImport(file: File) {
+    setImporting(true);
+    setImportErrors([]);
+    setImportMessage("");
+    setErrorMsg("");
+
+    const result = await parsePlanExcelFile(file);
+    if (result.missingColumns?.length) {
+      setImportMessage(
+        `${t("plan.import_missing_columns")}: ${result.missingColumns.join(", ")}`,
+      );
+      setImporting(false);
+      return;
+    }
+
+    if (result.errors.length > 0) {
+      setImportErrors(result.errors);
+      setImporting(false);
+      return;
+    }
+
+    if (result.rows.length === 0) {
+      setImportMessage(t("plan.import_no_rows"));
+      setImporting(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("production_plan")
+      .insert(planFormsToPayloads(result.rows, user?.id));
+
+    if (error) {
+      setErrorMsg(error.message);
+      setImporting(false);
+      return;
+    }
+
+    await loadPlans();
+    setImportMessage(t("plan.import_success", { count: String(result.rows.length) }));
+    setImporting(false);
+    setTab("view");
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await handleBulkImport(file);
+    e.target.value = "";
+  }
+
   const cardStyle = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
   const runningPlans = plans.filter((p) => p.batch_status === "Running");
   const planingPlans = plans.filter((p) => p.batch_status === "Planing");
@@ -135,7 +199,7 @@ export default function PlanPage() {
               className="text-sm px-3 py-1.5 rounded-lg border"
               style={cardStyle}
             >
-              ← {t("common.back")}
+              <AppIcon name="arrowLeft" size={14} /> {t("common.back")}
             </button>
             <h1 className="text-lg font-bold" style={{ color: "var(--color-anu-text)" }}>
               {t("plan.edit_batch")}: {editingPlan.form.batch}
@@ -186,14 +250,22 @@ export default function PlanPage() {
             className="text-sm px-3 py-1.5 rounded-lg border"
             style={cardStyle}
           >
-            ← {t("common.home")}
+            <AppIcon name="arrowLeft" size={14} /> {t("common.home")}
           </button>
           <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            🗓️ {t("plan.title")}
+            <AppIcon name="calendar" size={22} /> {t("plan.title")}
           </h1>
+          {!canEdit && (
+            <span
+              className="text-xs px-2 py-1 rounded-full font-medium"
+              style={{ background: "rgba(100,116,139,0.15)", color: "var(--color-anu-muted)" }}
+            >
+              {t("plan.read_only")}
+            </span>
+          )}
         </div>
 
-        {errorMsg && tab !== "view" && (
+        {errorMsg && (
           <p className="mb-4 text-sm" style={{ color: "var(--color-anu-danger)" }}>
             {errorMsg}
           </p>
@@ -203,8 +275,12 @@ export default function PlanPage() {
           {(
             [
               ["view", t("plan.tab_view")],
-              ["add", t("plan.tab_add")],
-              ["manage", t("plan.tab_manage")],
+              ...(canEdit
+                ? [
+                    ["add", t("plan.tab_add")],
+                    ["manage", t("plan.tab_manage")],
+                  ]
+                : []),
             ] as [string, string][]
           ).map(([key, label]) => (
             <button
@@ -353,21 +429,80 @@ export default function PlanPage() {
           </div>
         )}
 
-        {tab === "add" && (
-          <div className="rounded-xl border p-6" style={cardStyle}>
-            <PlanFormFields values={form} onChange={setForm} />
-            <button
-              onClick={handleAdd}
-              disabled={saving}
-              className="mt-6 px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
-              style={{ background: "var(--color-anu-accent)", color: "#fff" }}
-            >
-              {saving ? t("common.saving") : t("plan.add_save")}
-            </button>
+        {tab === "add" && canEdit && (
+          <div className="flex flex-col gap-6">
+            <div className="rounded-xl border p-6" style={cardStyle}>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => downloadPlanTemplate()}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border"
+                  style={cardStyle}
+                >
+                  <AppIcon name="download" size={16} />
+                  {t("plan.download_template")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importing}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  style={{ background: "var(--color-anu-elevated)", color: "var(--color-anu-text)" }}
+                >
+                  <AppIcon name="upload" size={16} />
+                  {importing ? t("plan.importing") : t("plan.import_excel")}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
+              <p className="text-xs mb-4" style={{ color: "var(--color-anu-muted)" }}>
+                {t("plan.import_hint")}
+              </p>
+              {importMessage && (
+                <p className="mb-4 text-sm" style={{ color: "var(--color-anu-success)" }}>
+                  {importMessage}
+                </p>
+              )}
+              {importErrors.length > 0 && (
+                <div
+                  className="mb-4 rounded-lg border p-3 text-sm"
+                  style={{ borderColor: "var(--color-anu-danger)", color: "var(--color-anu-danger)" }}
+                >
+                  <p className="font-medium mb-2">{t("plan.import_errors")}</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {importErrors.map((err) => (
+                      <li key={`${err.row}-${err.message}`}>
+                        {t("plan.import_row_error", { row: String(err.row), message: err.message })}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border p-6" style={cardStyle}>
+              <p className="text-sm font-medium mb-4" style={{ color: "var(--color-anu-text)" }}>
+                {t("plan.add_single")}
+              </p>
+              <PlanFormFields values={form} onChange={setForm} />
+              <button
+                onClick={handleAdd}
+                disabled={saving}
+                className="mt-6 px-6 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
+                style={{ background: "var(--color-anu-accent)", color: "#fff" }}
+              >
+                {saving ? t("common.saving") : t("plan.add_save")}
+              </button>
+            </div>
           </div>
         )}
 
-        {tab === "manage" && (
+        {tab === "manage" && canEdit && (
           <div className="flex flex-col gap-4">
             <div>
               <p
@@ -410,7 +545,7 @@ export default function PlanPage() {
                         className="px-3 py-1.5 rounded-lg text-xs border"
                         style={cardStyle}
                       >
-                        📝 {t("common.edit")}
+                        <AppIcon name="pencil" size={14} /> {t("common.edit")}
                       </button>
                       <button
                         onClick={() => handleFinish(p.id)}
@@ -468,7 +603,7 @@ export default function PlanPage() {
                         className="px-3 py-1.5 rounded-lg text-xs border"
                         style={cardStyle}
                       >
-                        📝 {t("common.edit")}
+                        <AppIcon name="pencil" size={14} /> {t("common.edit")}
                       </button>
                       <button
                         onClick={() => handleStartRunning(p.id)}

@@ -201,7 +201,7 @@ export default function LoginPage() {
               className="text-xs font-medium uppercase tracking-widest"
               style={{ color: "var(--color-anu-glow)" }}
             >
-              The Quantum Core
+              ANU Production
             </p>
             <h1 className="text-2xl font-bold" style={{ color: "var(--color-anu-text)" }}>
               ANU

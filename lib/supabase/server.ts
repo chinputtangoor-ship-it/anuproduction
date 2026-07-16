@@ -36,7 +36,7 @@ export async function getSessionProfile() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, fullname, role, emp_id, must_change_password, is_active")
+    .select("id, username, fullname, role, department, emp_id, must_change_password, is_active")
     .eq("id", user.id)
     .single();
 

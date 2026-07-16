@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { ProductionFlowShell } from "@/components/ProductionFlowShell";
 import { DEFECT_LIST } from "@/lib/constants/production";
+import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
@@ -103,22 +104,27 @@ export default function CameraPage() {
   }, []);
 
   async function handleSave(line: string, batch: string) {
+    if (!user?.id) return;
     setSaving(true);
     const c1PassNum = parseFloat(c1Pass) || 0;
     const c2PassNum = parseFloat(c2Pass) || 0;
 
-    const { error } = await supabase.from("camera_inspection").insert([{
-      line,
-      batch,
-      cam1_pass_rate: c1PassNum,
-      cam1_defects: buildDefectStr(c1Defs),
-      cam1_total_qty: totalQty(c1Defs),
-      cam2_pass_rate: c2PassNum,
-      cam2_defects: buildDefectStr(c2Defs),
-      cam2_total_qty: totalQty(c2Defs),
-      check_by: user?.fullname,
-      recorded_by: user?.id,
-    }]);
+    const { error } = await supabase.from("camera_inspection").insert([
+      withRecordedBy(
+        {
+          line,
+          batch,
+          cam1_pass_rate: c1PassNum,
+          cam1_defects: buildDefectStr(c1Defs),
+          cam1_total_qty: totalQty(c1Defs),
+          cam2_pass_rate: c2PassNum,
+          cam2_defects: buildDefectStr(c2Defs),
+          cam2_total_qty: totalQty(c2Defs),
+          check_by: user.id,
+        },
+        user.id,
+      ),
+    ]);
 
     if (error) {
       alert(error.message);
@@ -157,7 +163,7 @@ export default function CameraPage() {
   return (
     <ProductionFlowShell
       title={t("camera.title")}
-      titleIcon="📷"
+      titleIcon="camera"
       noBatchKey="camera.no_batch"
       lineCols={6}
       batchCols={4}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { AppIcon } from "@/components/AppIcon";
 import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { fetchRunningBatches } from "@/lib/data/production";
 import {
@@ -9,13 +10,14 @@ import {
   writeProductionContext,
   clearProductionContext,
 } from "@/lib/production/context";
+import type { AppIconName } from "@/lib/icons/app-icons";
 import { useI18n } from "@/lib/i18n/context";
 
 type FlowStep = "line" | "batch" | "record";
 
 type ProductionFlowShellProps = {
   title: string;
-  titleIcon: string;
+  titleIcon: AppIconName;
   noBatchKey: string;
   lineCols?: 4 | 6;
   batchCols?: 2 | 4;
@@ -146,13 +148,18 @@ export function ProductionFlowShell({
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={handleBack}
-            className="text-sm px-3 py-1.5 rounded-lg border"
+            className="text-sm px-3 py-1.5 rounded-lg border inline-flex items-center gap-1.5"
             style={cardStyle}
           >
-            ← {backLabel}
+            <AppIcon name="arrowLeft" size={14} />
+            {backLabel}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            {titleIcon} {title}
+          <h1
+            className="text-xl font-bold inline-flex items-center gap-2"
+            style={{ color: "var(--color-anu-text)" }}
+          >
+            <AppIcon name={titleIcon} size={22} />
+            {title}
           </h1>
           {headerExtra}
         </div>

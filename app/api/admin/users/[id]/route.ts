@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { UserRole } from "@/lib/auth/types";
+import { DEPARTMENTS, isDepartment } from "@/lib/constants/departments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
 
@@ -24,6 +25,13 @@ async function requireAdmin() {
   return profile;
 }
 
+function parseDepartment(raw: unknown): string | null | "__invalid__" {
+  if (raw == null || raw === "") return null;
+  const value = String(raw);
+  if (!isDepartment(value)) return "__invalid__";
+  return value;
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const adminProfile = await requireAdmin();
   if (!adminProfile) {
@@ -35,6 +43,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const fullname = String(body.fullname ?? "").trim();
   const username = String(body.username ?? "").trim().toLowerCase();
   const role = String(body.role ?? "operator") as UserRole;
+  const department = parseDepartment(body.department);
 
   if (!fullname || !username) {
     return NextResponse.json({ error: "fullname and username are required" }, { status: 400 });
@@ -44,6 +53,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
+  if (department === "__invalid__") {
+    return NextResponse.json(
+      { error: `Invalid department. Allowed: ${DEPARTMENTS.join(", ")}` },
+      { status: 400 },
+    );
+  }
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("profiles")
@@ -51,6 +67,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       fullname,
       username,
       role,
+      department,
       emp_id: body.emp_id?.trim() || null,
       birth_date: body.birth_date || null,
       join_date: body.join_date || null,

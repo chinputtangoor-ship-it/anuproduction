@@ -8,7 +8,7 @@ export const Logo = ({ className = "w-10 h-10" }: { className?: string }) => {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="The Quantum Core"
+      aria-label="ANU Production"
     >
       <defs>
         <linearGradient id="anuGradient" x1="0%" y1="100%" x2="100%" y2="0%">

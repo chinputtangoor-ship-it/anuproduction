@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { generateUsernameFromFullname, isValidUsername, sanitizeUsername } from "@/lib/auth/username";
 import { useI18n } from "@/lib/i18n/context";
+import { AppIcon } from "@/components/AppIcon";
+import { DEPARTMENTS } from "@/lib/constants/departments";
 
 const ROLES = [
   "operator",
@@ -42,6 +44,7 @@ export default function AccountPage() {
   const [fn, setFn]               = useState("");
   const [eid, setEid]             = useState("");
   const [role, setRole]           = useState("operator");
+  const [department, setDepartment] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [joinDate, setJoinDate]   = useState("");
   const [previewUn, setPreviewUn] = useState("");
@@ -52,6 +55,7 @@ export default function AccountPage() {
   const [editEid, setEditEid]                 = useState("");
   const [editUn, setEditUn]                   = useState("");
   const [editRole, setEditRole]               = useState("operator");
+  const [editDepartment, setEditDepartment]   = useState("");
   const [editBirthDate, setEditBirthDate]     = useState("");
   const [editJoinDate, setEditJoinDate]       = useState("");
 
@@ -78,7 +82,7 @@ export default function AccountPage() {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
     if (!res.ok) {
-      showMsg(`❌ ${data.error ?? "Load failed"}`, "error");
+      showMsg(`${data.error ?? "Load failed"}`, "error");
       return;
     }
     setUsers(data.users || []);
@@ -113,6 +117,7 @@ export default function AccountPage() {
         username: finalUn,
         password: finalPw,
         role,
+        department: department || null,
         birth_date: birthDate || null,
         join_date: joinDate || null,
       }),
@@ -120,14 +125,14 @@ export default function AccountPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      showMsg(`❌ ${data.error ?? t("user.err_save_failed")}`, "error");
+      showMsg(`${data.error ?? t("user.err_save_failed")}`, "error");
       setSaving(false);
       return;
     }
 
     await loadUsers();
     showMsg(t("user.suc_add", { name: fn.trim(), username: finalUn, password: finalPw }), "success");
-    setFn(""); setEid(""); setRole("operator");
+    setFn(""); setEid(""); setRole("operator"); setDepartment("");
     setBirthDate(""); setJoinDate("");
     setPreviewPw(generatePassword());
     setSaving(false);
@@ -139,6 +144,7 @@ export default function AccountPage() {
     setEditEid(u.emp_id       ?? "");
     setEditUn(u.username      ?? "");
     setEditRole(u.role        ?? "operator");
+    setEditDepartment(u.department ?? "");
     setEditBirthDate(u.birth_date ?? "");
     setEditJoinDate(u.join_date   ?? "");
   }
@@ -157,6 +163,7 @@ export default function AccountPage() {
         emp_id: editEid.trim() || null,
         username: editUn.trim(),
         role: editRole,
+        department: editDepartment || null,
         birth_date: editBirthDate || null,
         join_date: editJoinDate || null,
       }),
@@ -164,7 +171,7 @@ export default function AccountPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      showMsg(`❌ ${data.error ?? t("user.err_update_failed")}`, "error");
+      showMsg(`${data.error ?? t("user.err_update_failed")}`, "error");
       setSaving(false);
       return;
     }
@@ -184,7 +191,7 @@ export default function AccountPage() {
     }
     const res = await fetch(`/api/admin/users/${target.id}`, { method: "DELETE" });
     const data = await res.json();
-    if (!res.ok) { showMsg(`❌ ${data.error ?? t("user.err_delete_failed")}`, "error"); return; }
+    if (!res.ok) { showMsg(`${data.error ?? t("user.err_delete_failed")}`, "error"); return; }
     await loadUsers();
     showMsg(t("user.suc_delete", { name: target.fullname }), "success");
   }
@@ -192,7 +199,7 @@ export default function AccountPage() {
   async function handleResetPassword(target: any) {
     const res = await fetch(`/api/admin/users/${target.id}/reset-password`, { method: "POST" });
     const data = await res.json();
-    if (!res.ok) { showMsg(`❌ ${data.error ?? t("user.err_reset_failed")}`, "error"); return; }
+    if (!res.ok) { showMsg(`${data.error ?? t("user.err_reset_failed")}`, "error"); return; }
     const newPw = data.password as string;
     await loadUsers();
     showMsg(t("user.suc_reset_pw", { name: target.fullname, password: newPw }), "success");
@@ -219,6 +226,7 @@ export default function AccountPage() {
     t("user.col_emp_id"),
     t("user.col_username"),
     t("user.col_position"),
+    t("user.col_department"),
     t("user.col_birth"),
     t("user.col_join"),
     t("user.col_status"),
@@ -238,11 +246,11 @@ export default function AccountPage() {
         {/* Page header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.push("/dashboard")}
-            className="text-sm px-3 py-1.5 rounded-lg border" style={cardStyle}>
-            ← {t("common.home")}
+            className="text-sm px-3 py-1.5 rounded-lg border inline-flex items-center gap-1.5" style={cardStyle}>
+            <AppIcon name="arrowLeft" size={14} /> {t("common.home")}
           </button>
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-anu-text)" }}>
-            👥 {t("user.title")}
+          <h1 className="text-xl font-bold inline-flex items-center gap-2" style={{ color: "var(--color-anu-text)" }}>
+            <AppIcon name="userCog" size={22} /> {t("user.title")}
           </h1>
         </div>
 
@@ -299,6 +307,15 @@ export default function AccountPage() {
                   {ROLES.map(r => <option key={r}>{r}</option>)}
                 </select>
               </div>
+              <div>
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.department")}</p>
+                <select value={department} onChange={e => setDepartment(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                  <option value="">—</option>
+                  {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`department.${d}`)}</option>)}
+                </select>
+              </div>
+
 
               <DateField label={t("user.birth_date")} value={birthDate} onChange={setBirthDate} />
               <DateField label={t("user.join_date")}  value={joinDate}  onChange={setJoinDate}  />
@@ -377,6 +394,15 @@ export default function AccountPage() {
                       {ROLES.map(r => <option key={r}>{r}</option>)}
                     </select>
                   </div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.department")}</p>
+                    <select value={editDepartment} onChange={e => setEditDepartment(e.target.value)}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                      <option value="">—</option>
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`department.${d}`)}</option>)}
+                    </select>
+                  </div>
+
 
                   <DateField label={t("user.birth_date")} value={editBirthDate} onChange={setEditBirthDate} />
                   <DateField label={t("user.join_date")}  value={editJoinDate}  onChange={setEditJoinDate}  />
@@ -434,6 +460,9 @@ export default function AccountPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                        {u.department ? t(`department.${u.department}`) : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
                         {fmtDate(u.birth_date)}
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
@@ -469,7 +498,7 @@ export default function AccountPage() {
                   ))}
                   {users.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>
+                      <td colSpan={9} className="px-4 py-8 text-center" style={{ color: "var(--color-anu-muted)" }}>
                         {t("user.no_data")}
                       </td>
                     </tr>

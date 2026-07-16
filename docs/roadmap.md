@@ -1,0 +1,245 @@
+# ANU Production — Roadmap
+
+> Version: 1.1 · อ้างอิง owner brief + [decisions.md](./decisions.md) (2026-07-16)  
+> เป้าหมาย: flow โรงงานมาตรฐาน · แยกแผนก · audit ได้ · PWA  
+> Cursor rule: `.cursor/rules/anu-production.mdc` · UX: [ui-ux-spec.md](./ui-ux-spec.md) · QA: [qa-skill.md](./qa-skill.md)
+
+---
+
+## สถานะภาพรวม
+
+| Phase | ชื่อ | สถานะ | หมายเหตุ |
+|-------|------|--------|----------|
+| 0 | Baseline (ของที่มีอยู่) | ✅ มีแล้ว | Plan · QC Form · Box Status · Rejection · Analytics · Users |
+| 1 | Foundations & Standards | ✅ Done | Icons · audit stamp · department · menu ACL |
+| 2 | Quality Box Grade ↔ Post Production | ✅ Done | Box Grade · Post Production weigh-only |
+| 3 | Planner Excel + Plan visibility | ✅ Done | Import · read-only ทุกแผนก |
+| 4 | Batch 360° + Rejection by line | ✅ Done | หน้า batch · ประวัติกล่อง · กราฟ by line |
+| 5 | Department Dashboards | ✅ Done | Planner/Quality/Production/Post Production |
+| 6 | PWA & App identity | ✅ Done | manifest · icons · install · offline shell |
+| 7 | Warehouse / HR / Account | ⏸️ พัก | Dashboard ยังไม่ทำ |
+| 8 | Deep Odoo accounting bridge | ⏸️ หลังบ้านบัญชีเต็ม | หลัง flow หลักนิ่ง |
+
+---
+
+## Flow ธุรกิจเป้าหมาย (มาตรฐาน Odoo-style handoff)
+
+```
+1. Warehouse     รับวัตถุดิบเข้า
+2. Planner       กำหนด BOM + วางแผนผลิต
+3. Production    ผลิตตามแผน
+4. Quality       Box Grade (grade + defect) — ไม่แตะ QC Form เดิม
+5. Post Production  ชั่งน้ำหนัก + inspector บนกล่องที่ QC ส่งมา
+6. Warehouse     รับของสำเร็จรูป · จัดส่งลูกค้า
+```
+
+หลักการหลังบ้าน:
+
+- ทุกการบันทึก stamp จาก **user id ที่ login** อัตโนมัติ (`recorded_by` / Check by / Weight by / Inspector ฯลฯ) + เวลา — ห้ามพิมพ์ชื่อเอง
+- สิทธิ์แก้แผน = **Planner เท่านั้น** (admin/supervisor ตาม config)
+- แผนกอื่น **ดูแผนได้อย่างเดียว**
+- `department` = ฟิลด์เพิ่ม คู่กับ `role` เดิม (ไม่แทนที่)
+- สถานะกล่องข้ามแผนกชัด: **ยังไม่ graded → ไม่โชว์ Post Production** · graded แล้ว → โชว์ · weighed แล้ว → ครบ
+
+---
+
+## Phase 0 — Baseline (มีอยู่แล้ว — อ้างอิง)
+
+| โมดูล | Route / พื้นที่ | หมายเหตุ |
+|-------|-----------------|----------|
+| Plan | `/plan` | เพิ่ม/แก้แผน |
+| QC Form | `/quality` | **แช่แข็ง — ห้ามแก้ใน Phase 1–5** |
+| Box Status | `/record` | ปัจจุบันยังเลือก grade/defect ที่นี่ → จะย้ายใน Phase 2 |
+| Rejection | `/rejection` | จะเปลี่ยนกราฟใน Phase 4 |
+| Backlog / Camera / Repass | ตามเมนู | คงไว้จนกว่า roadmap จะระบุ |
+| Analytics | `/analytics` | ยกระดับ + ใช้เป็นแม่แบบ dashboard ใน Phase 5 |
+| Users | `/user` | เพิ่มแผนกใน Phase 1 |
+
+---
+
+## Phase 1 — Foundations & Standards
+
+**เป้าหมาย:** ฐานโค้ดสะอาด · UI สม่ำเสมอ · ตรวจสอบย้อนหลังได้
+
+| ID | งาน | รายละเอียด |
+|----|-----|------------|
+| 1.1 | Lucide icons only | แทน emoji ใน sidebar / dashboard / ทุก UI ด้วย `lucide-react` |
+| 1.2 | Auto recorder | create/update ทุกตารางสำคัญ stamp `recorded_by` / `updated_by` (+ timestamp) อัตโนมัติจาก session |
+| 1.3 | User · Department | เพิ่มฟิลด์ `department` คู่กับ `role`: Planner, Quality, Production, Post Production, Warehouse, Human Resources, Account |
+| 1.4 | Dept-scoped menu | ผู้ใช้เห็นงานของแผนกตนเป็นหลัก (admin/supervisor เห็นตามสิทธิ์เดิม) · role ยังใช้ควบคุมสิทธิ์เขียน |
+| 1.5 | Module structure | แยกโมดูลชัด · **logic คำนวณแยกไฟล์** · ห้ามไฟล์ยาวรวมทุกอย่าง |
+| 1.6 | Security pass | ตรวจ API role · ไม่รั่ว service_role · validate input |
+
+**Exit criteria**
+
+- [ ] ไม่มี emoji ใน UI ที่ user เห็น
+- [ ] บันทึกข้อมูลหลักมีชื่อผู้บันทึกย้อนดูได้
+- [ ] User มีแผนก และเมนูกรองตามแผนกได้
+- [ ] โฟลเดอร์ `lib/` แยก domain (plan / quality / boxes / calculations / …)
+
+**ไม่ทำใน Phase นี้:** Box Grade ใหม่ · Excel import · PWA · dashboard แผนกใหม่
+
+---
+
+## Phase 2 — Quality Box Grade ↔ Post Production
+
+**เป้าหมาย:** Grade/Defect มาจาก Quality **ทีละกล่อง** · Post Production เห็นเฉพาะกล่องที่ graded แล้ว · เหลือ Weight
+
+### 2.1 Box Grade (ใน Quality — คนละส่วนกับ QC Form)
+
+Flow UI (ต่อกล่อง):
+
+1. เลือก **Line**
+2. เลือก **Batch**
+3. เลือก **Box** (กล่องที่ยังไม่ graded)
+4. เลือก **Grade** (`BOX_STATUS`: AF, HP, HUP, Sort, PS, Scrap, HFX)
+5. ถ้า grade **ไม่อยู่ใน** `STATUSES_WITHOUT_DEFECT` (**AF, HP, HUP**) → ต้องเลือก **Defect** จาก [defect-list.md](./defect-list.md)
+6. กดบันทึก
+7. เมื่อสำเร็จ → **เฉพาะกล่องนั้น** ไปโผล่ใน **Box Status (Post Production)**
+8. กล่องที่ยังไม่ตรวจ / ยังไม่กำหนดเกรด → **ไม่แสดง** ที่ Post Production
+9. **Check by** stamp อัตโนมัติจาก user id ที่ login
+
+> **QC Form เดิม:** คงหน้าตาและ logic เดิมทุกอย่าง — อย่าพึ่งทำอะไร  
+> **DEFECT_LIST:** แทนที่ด้วยรายการใน `docs/defect-list.md`
+
+### 2.2 Box Status (Post Production) ปรับลด
+
+- รายการกล่อง = **เฉพาะที่ Quality graded แล้ว**
+- **เอาออก:** เลือก Grade · เลือก Defect
+- **เหลือ:** Weight (+ ฟิลด์ที่เกี่ยวข้อง) — แสดง grade/defect เป็น read-only
+- **Weight by / Inspector** stamp อัตโนมัติจาก user id ที่ login
+
+### 2.3 Audit
+
+- ทุกการเปลี่ยน grade / weight มีประวัติหรือ stamp ผู้แก้จาก session เสมอ
+
+**Exit criteria**
+
+- [ ] Quality กำหนด grade/defect **ทีละกล่อง** ได้
+- [ ] เฉพาะกล่อง graded แล้วโผล่ Post Production · ยังไม่ตรวจไม่โชว์
+- [ ] `/record` ไม่มี UI เลือก grade/defect
+- [ ] Defect list ตรง `docs/defect-list.md`
+- [ ] QC Form ไม่ถูกแก้
+- [ ] Check by / Weight by stamp จาก user id อัตโนมัติ
+
+---
+
+## Phase 3 — Planner Excel + Plan visibility
+
+| ID | งาน | รายละเอียด |
+|----|-----|------------|
+| 3.1 | Import from Excel | ใน Add/Edit Plan — import หลายแถวทีเดียว |
+| 3.2 | Column contract | คอลัมน์ = **ฟอร์มแผนปัจจุบันทั้งชุด** รวม ink/roller ฯลฯ (`PlanFormValues`) — ไม่ตรง = reject พร้อมบอกคอลัมน์ที่ผิด |
+| 3.3 | Plan read-only | ทุกแผนกเปิดดูแผนได้ · แก้ได้เฉพาะ Planner (+ admin/supervisor ตาม config) |
+
+**Exit criteria**
+
+- [ ] Download template Excel ได้
+- [ ] Import แถวที่ถูกต้องทั้งหมด · แถวผิดรายงานชัด
+- [ ] Role นอก Planner แก้แผนไม่ได้ (UI + API)
+
+---
+
+## Phase 4 — Batch 360° + Rejection by line
+
+### 4.1 หน้าดูข้อมูล Batch
+
+ค้นหา → กดเข้า batch → แสดงครบ:
+
+Line · Size · Batch · SAP Batch · Prod. Order · Sales Order · SO Item · FERT Code · Semi Code · Box no. · Box Status · Defects · Net (kg) · Total (kg) · Weight by · Check by · Start Date · Finish Date
+
+- กดเข้า **รายกล่อง** → ประวัติการแก้ไขรายละเอียด
+- จากหน้ารายละเอียดกล่อง → มีปุ่ม/ตัวเลือก **แก้ไข** ได้ (ตามสิทธิ์)
+
+### 4.2 Rejection chart
+
+- **ลบ** Scrap / Defect Pareto
+- **แทนด้วย** กราฟ Rejection **แยกตาม line**
+
+**Exit criteria**
+
+- [ ] เปิด batch แล้วเห็นข้อมูลครบตามรายการ
+- [ ] เปิดประวัติรายกล่อง + แก้ได้ตามสิทธิ์
+- [ ] Pareto หาย · มีกราฟ rejection by line
+
+---
+
+## Phase 5 — Department Dashboards
+
+| แผนก | Dashboard | หมายเหตุ |
+|------|-----------|----------|
+| Planner | ต้องมี | KPI แผน · สถานะ batch |
+| Quality | ต้องมี | grading progress · defect trends |
+| Production | ต้องมี | KPI จาก **ข้อมูลที่มีอยู่แล้ว** (แผน / batch status / line) — ไม่ต้องสร้างหน้ากรอก Production ก่อน |
+| Post Production | ยกระดับจาก Analytics ปัจจุบัน | มาตรฐานสากล (throughput / rejection by line ฯลฯ) |
+| Warehouse | ⏸️ ยังไม่ทำ | |
+| Human Resources | ⏸️ ยังไม่ทำ | |
+| Account | ⏸️ ยังไม่ทำ | |
+
+**Exit criteria**
+
+- [ ] 4 แผนกหลักมี dashboard ของตน
+- [ ] Post Production analytics ชัด อ่านง่าย ระดับมาตรฐาน
+- [ ] แผนกอื่นยังไม่ถูกบังคับให้มี dashboard
+
+---
+
+## Phase 6 — PWA & App identity
+
+| ID | งาน |
+|----|-----|
+| 6.1 | `manifest` + installable PWA |
+| 6.2 | App icon บนแท็บเบราว์เซอร์ (favicon) — ใช้โลโก้ ANU ที่ owner มีพร้อม |
+| 6.3 | Icon ตอนติดตั้งลงเครื่อง (192 / 512 และ maskable) จากโลโก้เดียวกัน |
+| 6.4 | Offline พื้นฐานตามที่ตกลง (อย่างน้อย shell / หน้าหลัก — รายละเอียดใน ui-ux-spec) |
+
+**Exit criteria**
+
+- [x] Add to Home Screen ได้ (`manifest` + icons)
+- [x] มีไอคอนแอปชัดเจนทั้ง browser และ installed app
+- [x] Offline shell พื้นฐาน (`sw.js` + `/offline.html`)
+
+---
+
+## Phase 7 — Warehouse / HR / Account (พัก)
+
+- รับวัตถุดิบ / รับ FG / ส่งลูกค้า (Warehouse) — ออกแบบหลัง flow 1–6 นิ่ง
+- HR · Account dashboard — ยังไม่ทำ
+- อย่าเริ่ม UI แผนกเหล่านี้จนกว่า owner จะเปิด phase
+
+---
+
+## Phase 8 — Accounting-correct depth (พัก)
+
+เมื่อ flow หลักเสร็จ แล้วค่อย:
+
+- journal / stock valuation แบบ Odoo (ถ้าต้องการเชื่อมบัญชีจริง)
+- ตอนนี้บังคับอย่างน้อย: audit trail + ไม่ทำลายความสอดคล้องของ batch/box state
+
+---
+
+## ลำดับทำที่แนะนำ (สั้น)
+
+```
+Phase 1 Foundations
+  → Phase 2 Box Grade handoff
+  → Phase 3 Excel + plan ACL
+  → Phase 4 Batch 360 + Rejection by line
+  → Phase 5 Dept dashboards
+  → Phase 6 PWA
+  → (พัก) 7–8
+```
+
+---
+
+## นอกขอบเขต (ตอนนี้)
+
+- แก้ QC Form
+- Dashboard Warehouse / HR / Account
+- เขียนโค้ดรวมยาวในไฟล์เดียว / hard-code คำนวณปน UI
+- Emoji ใน UI
+- Feature ที่ไม่ได้อยู่ใน phase ปัจจุบัน (ยกเว้น bug/security P0–P1)
+
+---
+
+*อัปเดตสถานะในตารางภาพรวมเมื่อจบแต่ละ Phase · ใช้ qa-skill.md เป็นประตูก่อน deploy*

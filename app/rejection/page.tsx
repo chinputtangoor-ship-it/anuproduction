@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { ProductionFlowShell } from "@/components/ProductionFlowShell";
+import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
@@ -27,20 +28,25 @@ export default function RejectionPage() {
   }, []);
 
   async function handleSave(line: string, batch: string) {
+    if (!user?.id) return;
     setSaving(true);
     const atsVal = parseFloat(atsKg) || 0;
     const printVal = parseFloat(printKg) || 0;
     const camVal = parseFloat(camKg) || 0;
 
-    const { error } = await supabase.from("rejection").insert([{
-      line,
-      batch,
-      ats_kg: atsVal,
-      print_kg: printVal,
-      cam_kg: camVal,
-      check_by: user?.fullname,
-      recorded_by: user?.id,
-    }]);
+    const { error } = await supabase.from("rejection").insert([
+      withRecordedBy(
+        {
+          line,
+          batch,
+          ats_kg: atsVal,
+          print_kg: printVal,
+          cam_kg: camVal,
+          check_by: user.id,
+        },
+        user.id,
+      ),
+    ]);
 
     if (error) {
       alert(error.message);
@@ -66,7 +72,7 @@ export default function RejectionPage() {
   return (
     <ProductionFlowShell
       title={t("rejection.title")}
-      titleIcon="🗑️"
+      titleIcon="ban"
       noBatchKey="rejection.no_batch"
       onBatchReady={resetForm}
     >
