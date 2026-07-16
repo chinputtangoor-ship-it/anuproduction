@@ -2,20 +2,10 @@ import { NextResponse } from "next/server";
 import { usernameToAuthEmail } from "@/lib/auth/email";
 import { isValidUsername, sanitizeUsername } from "@/lib/auth/username";
 import type { UserRole } from "@/lib/auth/types";
+import { POSITIONS, isValidPosition } from "@/lib/auth/permissions";
 import { DEPARTMENTS, isDepartment } from "@/lib/constants/departments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
-
-const ROLES: UserRole[] = [
-  "operator",
-  "qc_technician",
-  "production_operator",
-  "warehouse_operator",
-  "supervisor",
-  "manager",
-  "planner",
-  "admin",
-];
 
 function adminConfigError(error: unknown) {
   const message = error instanceof Error ? error.message : "Server configuration error";
@@ -92,8 +82,15 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!ROLES.includes(role)) {
-    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  if (!isValidPosition(role)) {
+    return NextResponse.json({ error: "Invalid position" }, { status: 400 });
+  }
+
+  if ((role === "operator" || role === "supervisor") && !department) {
+    return NextResponse.json(
+      { error: "Department is required for operator and supervisor" },
+      { status: 400 },
+    );
   }
 
   if (department === "__invalid__") {

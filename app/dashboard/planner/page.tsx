@@ -90,7 +90,7 @@ export default function PlannerDashboardPage() {
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={kpis.byLine}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-anu-border)" />
-                    <XAxis dataKey="line" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                    <XAxis dataKey="line" tick={{ fill: "var(--color-anu-muted)", fontSize: 11 }} />
                     <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{

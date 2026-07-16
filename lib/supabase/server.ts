@@ -1,3 +1,4 @@
+import { profileToSessionUser } from "@/lib/auth/profile";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -40,5 +41,16 @@ export async function getSessionProfile() {
     .eq("id", user.id)
     .single();
 
-  return { supabase, user, profile };
+  const sessionUser = profile ? profileToSessionUser(profile) : null;
+
+  return {
+    supabase,
+    user,
+    profile: sessionUser
+      ? {
+          ...profile!,
+          role: sessionUser.role,
+        }
+      : null,
+  };
 }

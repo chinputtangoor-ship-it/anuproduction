@@ -6,6 +6,8 @@ import { Logo } from "@/components/pages/Logo";
 import { usernameToAuthEmail } from "@/lib/auth/email";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LangToggle } from "@/lib/i18n/LangToggle";
 import { useI18n } from "@/lib/i18n/context";
 
 export default function LoginPage() {
@@ -119,12 +121,16 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6">
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <ThemeToggle />
+        <LangToggle />
+      </div>
 
       {showChangePw && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-4"
-          style={{ background: "rgba(0,0,0,0.7)" }}
+          style={{ background: "var(--color-anu-overlay)" }}
         >
           <div
             className="w-full max-w-sm rounded-2xl border p-6 flex flex-col gap-4"

@@ -146,7 +146,7 @@ export default function QualityDashboardPage() {
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={kpis.topDefects} layout="vertical" margin={{ left: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-anu-border)" />
-                    <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} allowDecimals={false} />
+                    <XAxis type="number" tick={{ fill: "var(--color-anu-muted)", fontSize: 11 }} allowDecimals={false} />
                     <YAxis
                       type="category"
                       dataKey="name"

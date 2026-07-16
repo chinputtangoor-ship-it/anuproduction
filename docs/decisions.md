@@ -12,5 +12,5 @@
 | D5 | แผนก vs Role | `department` เป็น **ฟิลด์เพิ่ม** คู่กับ `role` เดิม — ไม่แทนที่ role |
 | D6 | Excel Plan | คอลัมน์ครบตามฟอร์มแผนปัจจุบันทั้งชุด (รวม ink / roller ฯลฯ) |
 | D7 | PWA / favicon | ใช้โลโก้ใน `public/icons/` (`icon.svg`, `icon-192.png`, `icon-512.png`) |
-| D9 | Menu ACL | **admin / manager** เห็นทุกแผนก · **supervisor** เห็นเฉพาะแผนกตน (ต้องมี department) · role อื่นตาม role + department |
+| D9 | Position + แผนก | **Position** = `admin` · `manager` · `supervisor` · `operator` + **`department`** · admin = ทั้งหมด · manager = ทั้งหมดยกเว้น User · supervisor = ทั้งหมดในแผนก + approve · operator = ทั้งหมดในแผนก ไม่ approve |
 | D10 | Box Grade handoff | QC insert กล่อง (grade/defect, น้ำหนักว่าง) → Post Production เห็นเฉพาะกล่องที่รอชั่ง (`net_weight_kg` null) |

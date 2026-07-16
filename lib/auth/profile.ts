@@ -1,11 +1,12 @@
 import type { Department } from "@/lib/constants/departments";
 import type { SessionUser, UserRole } from "@/lib/auth/types";
+import { normalizeRole } from "@/lib/auth/types";
 
 export type ProfileRow = {
   id: string;
   username: string;
   fullname: string;
-  role: UserRole;
+  role: string;
   department?: Department | null;
   emp_id?: string | null;
   must_change_password?: boolean;
@@ -17,7 +18,7 @@ export function profileToSessionUser(profile: ProfileRow): SessionUser {
     id: profile.id,
     username: profile.username,
     fullname: profile.fullname,
-    role: profile.role,
+    role: normalizeRole(profile.role),
     department: profile.department ?? null,
     emp_id: profile.emp_id ?? null,
     first_login: profile.must_change_password ?? false,

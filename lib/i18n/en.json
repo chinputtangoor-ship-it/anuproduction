@@ -24,6 +24,12 @@
     "random_again": "Random again",
     "reset_all": "Reset all"
   },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light",
+    "switch_dark": "Switch to dark mode",
+    "switch_light": "Switch to light mode"
+  },
   "nav": {
     "planner": "Planner",
     "quality": "Quality",
@@ -500,6 +506,12 @@
     "status_of_nonaf": "Status of Non-AF",
     "no_pending": "No pending work.",
     "footer_updated": "Latest processing"
+  },
+  "position": {
+    "admin": "Admin",
+    "manager": "Manager",
+    "supervisor": "Supervisor",
+    "operator": "Operator"
   },
   "department": {
     "planner": "Planner",

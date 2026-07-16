@@ -12,6 +12,51 @@
   --color-anu-success:  #00d4aa;
   --color-anu-warning:  #ffa502;
   --color-anu-danger:   #ff4757;
+  --color-anu-chart-blue: #54a0ff;
+  --color-anu-on-accent: #ffffff;
+  --color-anu-header-bg: rgba(5, 5, 8, 0.85);
+  --color-anu-overlay: rgba(0, 0, 0, 0.7);
+}
+
+/* Dark mode (default) */
+:root,
+[data-theme="dark"] {
+  --color-anu-void:     #050508;
+  --color-anu-surface:  #0f1117;
+  --color-anu-elevated: #171921;
+  --color-anu-border:   #1e2230;
+  --color-anu-text:     #e2e8f0;
+  --color-anu-muted:    #94a3b8;
+  --color-anu-accent:   #7c5cff;
+  --color-anu-glow:     #a78bfa;
+  --color-anu-success:  #00d4aa;
+  --color-anu-warning:  #ffa502;
+  --color-anu-danger:   #ff4757;
+  --color-anu-chart-blue: #54a0ff;
+  --color-anu-on-accent: #ffffff;
+  --color-anu-header-bg: rgba(5, 5, 8, 0.85);
+  --color-anu-overlay: rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+/* Light mode — high contrast text on light surfaces */
+[data-theme="light"] {
+  --color-anu-void:     #e2e8f0;
+  --color-anu-surface:  #ffffff;
+  --color-anu-elevated: #f8fafc;
+  --color-anu-border:   #cbd5e1;
+  --color-anu-text:     #0f172a;
+  --color-anu-muted:    #475569;
+  --color-anu-accent:   #6d28d9;
+  --color-anu-glow:     #5b21b6;
+  --color-anu-success:  #047857;
+  --color-anu-warning:  #b45309;
+  --color-anu-danger:   #b91c1c;
+  --color-anu-chart-blue: #2563eb;
+  --color-anu-on-accent: #ffffff;
+  --color-anu-header-bg: rgba(255, 255, 255, 0.92);
+  --color-anu-overlay: rgba(15, 23, 42, 0.5);
+  color-scheme: light;
 }
 
 html {
@@ -23,8 +68,25 @@ body {
   background-color: var(--color-anu-void);
   color: var(--color-anu-text);
   -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="dark"] body,
+:root:not([data-theme="light"]) body {
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,92,255,0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(167,139,250,0.08), transparent),
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 92, 255, 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(167, 139, 250, 0.08), transparent),
     linear-gradient(180deg, #050508 0%, #0a0a10 100%);
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 92, 255, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(109, 40, 217, 0.05), transparent),
+    linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+input,
+select,
+textarea {
+  color-scheme: inherit;
 }

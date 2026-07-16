@@ -13,21 +13,26 @@ import {
   LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer,
 } from "recharts";
 
-const ACCENT   = "#7c5cff";
-const SUCCESS  = "#00d4aa";
-const WARNING  = "#ffa502";
-const DANGER   = "#ff4757";
-const BLUE     = "#54a0ff";
-const MUTED    = "#64748b";
-const SURFACE  = "#0f1117";
-const ELEVATED = "#171921";
-const BORDER   = "#1e2230";
-const TEXT     = "#e2e8f0";
+const ACCENT   = "var(--color-anu-accent)";
+const SUCCESS  = "var(--color-anu-success)";
+const WARNING  = "var(--color-anu-warning)";
+const DANGER   = "var(--color-anu-danger)";
+const BLUE     = "var(--color-anu-chart-blue)";
+const MUTED    = "var(--color-anu-muted)";
+const SURFACE  = "var(--color-anu-surface)";
+const ELEVATED = "var(--color-anu-elevated)";
+const BORDER   = "var(--color-anu-border)";
+const TEXT     = "var(--color-anu-text)";
 
 const TOOLTIP_STYLE = {
-  contentStyle: { background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8, color: "#e2e8f0" },
-  labelStyle:   { color: "#e2e8f0", fontWeight: 600 },
-  itemStyle:    { color: "#e2e8f0" },
+  contentStyle: {
+    background: "var(--color-anu-elevated)",
+    border: "1px solid var(--color-anu-border)",
+    borderRadius: 8,
+    color: "var(--color-anu-text)",
+  },
+  labelStyle:   { color: "var(--color-anu-text)", fontWeight: 600 },
+  itemStyle:    { color: "var(--color-anu-text)" },
 };
 
 const DEFECT_COLORS = [DANGER,"#ff6b81",WARNING,BLUE,SUCCESS,"#9b59b6","#e67e22","#f1c40f","#2ecc71","#3498db"];
@@ -496,7 +501,7 @@ export default function AnalyticsPage() {
                         ]}
                       />
                       <Bar dataKey="pct" radius={[4, 4, 0, 0]}
-                           label={{ position: "top", fill: "#94a3b8", fontSize: 10, formatter: ((v: number) => `${v}%`) as any }}>
+                           label={{ position: "top", fill: MUTED, fontSize: 10, formatter: ((v: number) => `${v}%`) as any }}>
                         {progressData.map((d, i) => <Cell key={i} fill={d.color} />)}
                       </Bar>
                     </BarChart>
@@ -528,13 +533,13 @@ export default function AnalyticsPage() {
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={rejectionByLine} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-                      <XAxis dataKey="line" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                      <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 11 }} />
+                      <YAxis tick={{ fill: MUTED, fontSize: 10 }} />
                       <Tooltip
                         {...TOOLTIP_STYLE}
                         formatter={(v: any) => [`${v} kg`]}
                       />
-                      <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 11 }} />
+                      <Legend wrapperStyle={{ color: MUTED, fontSize: 11 }} />
                       <Bar dataKey="ats" name="ATS" stackId="rej" fill={BLUE} />
                       <Bar dataKey="print" name="Print" stackId="rej" fill={WARNING} />
                       <Bar dataKey="cam" name="CAM" stackId="rej" fill={DANGER} radius={[3, 3, 0, 0]} />
@@ -557,7 +562,7 @@ export default function AnalyticsPage() {
                         <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 11 }} />
                         <YAxis tickFormatter={v => `${v}%`} tick={{ fill: MUTED, fontSize: 11 }} domain={[0, 105]} />
                         <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${v}%`]} />
-                        <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 11 }} />
+                        <Legend wrapperStyle={{ color: MUTED, fontSize: 11 }} />
                         <Bar dataKey="cam1" name="Cam1 Pass%" fill={BLUE}    radius={[3, 3, 0, 0]} />
                         <Bar dataKey="cam2" name="Cam2 Pass%" fill={SUCCESS} radius={[3, 3, 0, 0]} />
                       </BarChart>
@@ -578,7 +583,7 @@ export default function AnalyticsPage() {
                           <tr style={{ background: ELEVATED }}>
                             {["Line", "Cam1 Pass%", "Cam2 Pass%", "Cam1 Rej", "Cam2 Rej", "Top Defects"].map(h => (
                               <th key={h} className="px-3 py-2.5 text-left font-medium whitespace-nowrap"
-                                  style={{ color: "#94a3b8", borderBottom: `1px solid ${BORDER}` }}>
+                                  style={{ color: MUTED, borderBottom: `1px solid ${BORDER}` }}>
                                 {h}
                               </th>
                             ))}
@@ -595,9 +600,9 @@ export default function AnalyticsPage() {
                               <td className="px-3 py-2 font-bold" style={{ color: passColor(r.cam2) }}>
                                 {r.cam2 != null ? `${r.cam2.toFixed(2)}%` : "-"}
                               </td>
-                              <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{r.c1rej}</td>
-                              <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{r.c2rej}</td>
-                              <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{r.topDefs || "-"}</td>
+                              <td className="px-3 py-2" style={{ color: MUTED }}>{r.c1rej}</td>
+                              <td className="px-3 py-2" style={{ color: MUTED }}>{r.c2rej}</td>
+                              <td className="px-3 py-2" style={{ color: MUTED }}>{r.topDefs || "-"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -628,7 +633,7 @@ export default function AnalyticsPage() {
                       <tr style={{ background: ELEVATED }}>
                         {["Line", "AF Box", "Target", "Yield%", "Scrap%", "Rej (kg)", "Backlog", "Status"].map(h => (
                           <th key={h} className="px-3 py-3 text-left font-medium whitespace-nowrap"
-                              style={{ color: "#94a3b8", borderBottom: `1px solid ${BORDER}` }}>
+                              style={{ color: MUTED, borderBottom: `1px solid ${BORDER}` }}>
                             {h}
                           </th>
                         ))}
@@ -639,11 +644,11 @@ export default function AnalyticsPage() {
                         <tr key={s.line} style={{ background: i % 2 === 0 ? SURFACE : "var(--color-anu-void)", borderTop: `1px solid ${BORDER}` }}>
                           <td className="px-3 py-2.5 font-bold"  style={{ color: TEXT }}>{s.line}</td>
                           <td className="px-3 py-2.5 font-bold"  style={{ color: SUCCESS }}>{s.af.toLocaleString()}</td>
-                          <td className="px-3 py-2.5"            style={{ color: "#94a3b8" }}>{s.tgt.toLocaleString()}</td>
+                          <td className="px-3 py-2.5"            style={{ color: MUTED }}>{s.tgt.toLocaleString()}</td>
                           <td className="px-3 py-2.5 font-bold"  style={{ color: kpiColor(s.yld, 90, 70) }}>{s.yld.toFixed(1)}%</td>
                           <td className="px-3 py-2.5 font-bold"  style={{ color: kpiColor(s.scr, 2, 5, true) }}>{s.scr.toFixed(1)}%</td>
-                          <td className="px-3 py-2.5"            style={{ color: s.rejKg > 0 ? WARNING : "#94a3b8" }}>{s.rejKg.toFixed(2)}</td>
-                          <td className="px-3 py-2.5"            style={{ color: s.bl > 0 ? DANGER : "#94a3b8" }}>{s.bl}</td>
+                          <td className="px-3 py-2.5"            style={{ color: s.rejKg > 0 ? WARNING : MUTED }}>{s.rejKg.toFixed(2)}</td>
+                          <td className="px-3 py-2.5"            style={{ color: s.bl > 0 ? DANGER : MUTED }}>{s.bl}</td>
                           <td className="px-3 py-2.5">
                             <span style={{ color: s.scr <= 3 ? SUCCESS : s.scr <= 10 ? WARNING : DANGER }}>
                               {s.scr <= 3 ? "🟢" : s.scr <= 10 ? "🟡" : "🔴"}
@@ -670,8 +675,8 @@ export default function AnalyticsPage() {
                         data={lineStats.filter(s => s.bl > 0).map(s => ({ line: s.line, backlog: s.bl }))}
                         margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-                        <XAxis dataKey="line" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                        <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 10 }} />
+                        <YAxis tick={{ fill: MUTED, fontSize: 10 }} />
                         <Tooltip
                           contentStyle={{ background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8 }}
                           labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
@@ -710,8 +715,8 @@ export default function AnalyticsPage() {
                     <ResponsiveContainer width="100%" height={120}>
                       <BarChart data={rpByLine} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
-                        <XAxis dataKey="line" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                        <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 10 }} />
+                        <YAxis tick={{ fill: MUTED, fontSize: 10 }} />
                         <Tooltip
                           contentStyle={{ background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8 }}
                           labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
@@ -738,7 +743,7 @@ export default function AnalyticsPage() {
                         <tr style={{ background: ELEVATED }}>
                           {["Line", "Batch", "Box", "Status", "Defects", "Time"].map(h => (
                             <th key={h} className="px-3 py-2.5 text-left font-medium"
-                                style={{ color: "#94a3b8", borderBottom: `1px solid ${BORDER}` }}>{h}</th>
+                                style={{ color: MUTED, borderBottom: `1px solid ${BORDER}` }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -754,8 +759,8 @@ export default function AnalyticsPage() {
                                 {b.status}
                               </span>
                             </td>
-                            <td className="px-3 py-2" style={{ color: "#94a3b8" }}>{b.defects || "-"}</td>
-                            <td className="px-3 py-2 whitespace-nowrap" style={{ color: "#94a3b8" }}>{b.recorded_at?.slice(0, 16).replace("T", " ")}</td>
+                            <td className="px-3 py-2" style={{ color: MUTED }}>{b.defects || "-"}</td>
+                            <td className="px-3 py-2 whitespace-nowrap" style={{ color: MUTED }}>{b.recorded_at?.slice(0, 16).replace("T", " ")}</td>
                           </tr>
                         ))}
                       </tbody>

@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
 import type { UserRole } from "@/lib/auth/types";
+import { isValidPosition } from "@/lib/auth/permissions";
 import { DEPARTMENTS, isDepartment } from "@/lib/constants/departments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
-
-const ROLES: UserRole[] = [
-  "operator",
-  "qc_technician",
-  "production_operator",
-  "warehouse_operator",
-  "supervisor",
-  "manager",
-  "planner",
-  "admin",
-];
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -49,8 +39,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "fullname and username are required" }, { status: 400 });
   }
 
-  if (!ROLES.includes(role)) {
-    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  if (!isValidPosition(role)) {
+    return NextResponse.json({ error: "Invalid position" }, { status: 400 });
+  }
+
+  if ((role === "operator" || role === "supervisor") && !department) {
+    return NextResponse.json(
+      { error: "Department is required for operator and supervisor" },
+      { status: 400 },
+    );
   }
 
   if (department === "__invalid__") {

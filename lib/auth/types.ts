@@ -1,14 +1,24 @@
-import type { Department } from "@/lib/constants/departments";
+/** Four shop-floor positions — access is combined with `department`. */
+export type UserRole = "admin" | "manager" | "supervisor" | "operator";
 
-export type UserRole =
-  | "operator"
-  | "qc_technician"
-  | "production_operator"
-  | "warehouse_operator"
-  | "supervisor"
-  | "manager"
-  | "planner"
-  | "admin";
+export const POSITIONS: UserRole[] = ["admin", "manager", "supervisor", "operator"];
+
+const LEGACY_ROLE_MAP: Record<string, UserRole> = {
+  admin: "admin",
+  manager: "manager",
+  supervisor: "supervisor",
+  operator: "operator",
+  planner: "operator",
+  qc_technician: "operator",
+  production_operator: "operator",
+  warehouse_operator: "operator",
+};
+
+/** Map legacy DB roles to the four positions (app layer). */
+export function normalizeRole(role: string | null | undefined): UserRole {
+  if (!role) return "operator";
+  return LEGACY_ROLE_MAP[role] ?? "operator";
+}
 
 /** Client-safe session — never store password_hash or other secrets. */
 export type SessionUser = {
@@ -16,7 +26,7 @@ export type SessionUser = {
   username: string;
   fullname: string;
   role: UserRole;
-  department?: Department | null;
+  department?: import("@/lib/constants/departments").Department | null;
   emp_id?: string | null;
   position?: string | null;
   first_login?: boolean;

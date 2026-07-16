@@ -24,6 +24,12 @@
     "random_again": "สุ่มใหม่",
     "reset_all": "รีเซ็ตทั้งหมด"
   },
+  "theme": {
+    "dark": "มืด",
+    "light": "สว่าง",
+    "switch_dark": "เปลี่ยนเป็นโหมดมืด",
+    "switch_light": "เปลี่ยนเป็นโหมดสว่าง"
+  },
   "nav": {
     "planner": "Planner",
     "quality": "คุณภาพ",
@@ -500,6 +506,12 @@
     "status_of_nonaf": "สถานะของ Non-AF",
     "no_pending": "ไม่มีงานค้าง",
     "footer_updated": "อัปเดตล่าสุด"
+  },
+  "position": {
+    "admin": "ผู้ดูแลระบบ",
+    "manager": "ผู้จัดการ",
+    "supervisor": "หัวหน้างาน",
+    "operator": "พนักงานปฏิบัติการ"
   },
   "department": {
     "planner": "Planner",

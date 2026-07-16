@@ -5,6 +5,7 @@ import { Logo } from "@/components/pages/Logo";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { LangToggle } from "@/lib/i18n/LangToggle";
 import { useI18n } from "@/lib/i18n/context";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function GlobalHeader() {
   const pathname = usePathname();
@@ -18,7 +19,7 @@ export function GlobalHeader() {
     <header
       className="sticky top-0 z-50 border-b px-4 py-3 flex items-center justify-between"
       style={{
-        background: "rgba(5,5,8,0.85)",
+        background: "var(--color-anu-header-bg)",
         borderColor: "var(--color-anu-border)",
         backdropFilter: "blur(12px)",
       }}
@@ -57,6 +58,7 @@ export function GlobalHeader() {
           Live
         </span>
 
+        <ThemeToggle />
         <LangToggle />
 
         <button

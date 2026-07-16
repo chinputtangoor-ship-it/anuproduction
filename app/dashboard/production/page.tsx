@@ -134,7 +134,7 @@ export default function ProductionDashboardPage() {
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={progressData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-anu-border)" />
-                  <XAxis dataKey="line" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                  <XAxis dataKey="line" tick={{ fill: "var(--color-anu-muted)", fontSize: 11 }} />
                   <YAxis
                     tickFormatter={(v) => `${v}%`}
                     domain={[0, 110]}

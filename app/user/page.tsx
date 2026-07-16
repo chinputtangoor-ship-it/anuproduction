@@ -7,17 +7,11 @@ import { generateUsernameFromFullname, isValidUsername, sanitizeUsername } from 
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
 import { DEPARTMENTS } from "@/lib/constants/departments";
+import { POSITIONS } from "@/lib/auth/permissions";
+import type { UserRole } from "@/lib/auth/types";
+import { normalizeRole } from "@/lib/auth/types";
 
-const ROLES = [
-  "operator",
-  "qc_technician",
-  "production_operator",
-  "warehouse_operator",
-  "supervisor",
-  "manager",
-  "planner",
-  "admin",
-];
+const ROLES = POSITIONS;
 
 function generatePassword(): string {
   const letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -61,7 +55,7 @@ export default function AccountPage() {
 
   const cardStyle  = { background: "var(--color-anu-surface)", borderColor: "var(--color-anu-border)" };
   const inputStyle = { background: "var(--color-anu-elevated)", borderColor: "var(--color-anu-border)", color: "var(--color-anu-text)" };
-  const dateStyle  = { ...inputStyle, colorScheme: "dark" as const };
+  const dateStyle  = inputStyle;
 
   useEffect(() => {
     if (authLoading) return;
@@ -304,7 +298,11 @@ export default function AccountPage() {
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.position")}</p>
                 <select value={role} onChange={e => setRole(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
-                  {ROLES.map(r => <option key={r}>{r}</option>)}
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {t(`position.${r}`)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -391,7 +389,11 @@ export default function AccountPage() {
                     <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.position")}</p>
                     <select value={editRole} onChange={e => setEditRole(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
-                      {ROLES.map(r => <option key={r}>{r}</option>)}
+                      {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {t(`position.${r}`)}
+                    </option>
+                  ))}
                     </select>
                   </div>
                   <div>
@@ -447,16 +449,16 @@ export default function AccountPage() {
                       <td className="px-4 py-3">
                         <span className="px-2 py-1 rounded-full text-xs font-medium"
                               style={{
-                                background: u.role === "admin"      ? "rgba(124,92,255,0.15)" :
-                                            u.role === "supervisor" ? "rgba(255,165,2,0.15)"  :
-                                            u.role === "manager"    ? "rgba(59,130,246,0.15)" :
+                                background: normalizeRole(u.role) === "admin"      ? "rgba(124,92,255,0.15)" :
+                                            normalizeRole(u.role) === "supervisor" ? "rgba(255,165,2,0.15)"  :
+                                            normalizeRole(u.role) === "manager"    ? "rgba(59,130,246,0.15)" :
                                             "rgba(100,116,139,0.15)",
-                                color:      u.role === "admin"      ? "var(--color-anu-glow)"   :
-                                            u.role === "supervisor" ? "var(--color-anu-warning)" :
-                                            u.role === "manager"    ? "#3b82f6"                  :
+                                color:      normalizeRole(u.role) === "admin"      ? "var(--color-anu-glow)"   :
+                                            normalizeRole(u.role) === "supervisor" ? "var(--color-anu-warning)" :
+                                            normalizeRole(u.role) === "manager"    ? "#3b82f6"                  :
                                             "var(--color-anu-muted)",
                               }}>
-                          {u.role}
+                          {t(`position.${normalizeRole(u.role)}`)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
