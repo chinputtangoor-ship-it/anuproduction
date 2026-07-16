@@ -9,6 +9,7 @@ import {
   fetchBatchDetail,
   fetchBoxChangeLog,
   updateBoxWithHistory,
+  type BatchBacklog,
   type BatchBox,
   type BatchPlan,
   type BatchRejection,
@@ -64,6 +65,7 @@ export default function BoxesPage() {
   const [plan, setPlan] = useState<BatchPlan | null>(null);
   const [boxes, setBoxes] = useState<BatchBox[]>([]);
   const [rejections, setRejections] = useState<BatchRejection[]>([]);
+  const [backlogs, setBacklogs] = useState<BatchBacklog[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -103,6 +105,7 @@ export default function BoxesPage() {
       setPlan(detail.plan);
       setBoxes(detail.boxes);
       setRejections(detail.rejections);
+      setBacklogs(detail.backlogs);
       setNames(detail.names);
       if (!detail.plan && detail.boxes.length === 0) {
         setErrorMsg(t("boxes.batch_not_found", { batch: searchBatch.trim() }));
@@ -185,6 +188,8 @@ export default function BoxesPage() {
   const totalCam = rejections.reduce((s, r) => s + (r.cam_kg || 0), 0);
   const totalReject = rejections.reduce((s, r) => s + (r.total_kg || 0), 0);
 
+  const latestBacklog = backlogs.length > 0 ? backlogs[backlogs.length - 1] : null;
+
   const PLAN_FIELDS: { label: string; value: string }[] = plan
     ? [
         { label: "Line", value: plan.line },
@@ -196,11 +201,9 @@ export default function BoxesPage() {
         { label: "SO Item", value: plan.sales_order_item || "-" },
         { label: "FERT Code", value: plan.fert_code || "-" },
         { label: "Semi Code", value: plan.semifinish_code || "-" },
+        { label: "Plan Finish", value: formatDate(plan.planned_finish_date) },
         { label: "Start Date", value: formatDate(plan.created_at) },
-        {
-          label: "Finish Date",
-          value: formatDate(plan.batch_finish_date || plan.planned_finish_date),
-        },
+        { label: "Finish Date", value: formatDate(plan.batch_finish_date) },
         { label: "Status", value: plan.batch_status || "-" },
       ]
     : [];
@@ -594,6 +597,127 @@ export default function BoxesPage() {
                           </p>
                         </div>
                       ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {searched && !loading && (
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-anu-muted)" }}>
+                  {t("boxes.backlog_section", { batch: searchBatch.trim() })}
+                </h2>
+                {backlogs.length === 0 ? (
+                  <div className="rounded-xl border p-4 text-center text-sm" style={cardStyle}>
+                    <span style={{ color: "var(--color-anu-success)" }}>{t("boxes.no_backlog")}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                      {[
+                        { label: t("boxes.bl_ats"), value: latestBacklog?.ats_box ?? 0 },
+                        { label: t("boxes.bl_print"), value: latestBacklog?.print_box ?? 0 },
+                        { label: t("boxes.bl_cam"), value: latestBacklog?.cam_box ?? 0 },
+                        {
+                          label: t("boxes.bl_total"),
+                          value: latestBacklog?.total_backlog ?? 0,
+                          highlight: true,
+                        },
+                      ].map((s) => (
+                        <div key={s.label} className="rounded-xl border p-4 text-center" style={cardStyle}>
+                          <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                            {s.label}
+                          </p>
+                          <p
+                            className="text-2xl font-black"
+                            style={{
+                              color: s.highlight
+                                ? "var(--color-anu-warning)"
+                                : "var(--color-anu-text)",
+                            }}
+                          >
+                            {s.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      className="overflow-x-auto rounded-xl border"
+                      style={{ borderColor: "var(--color-anu-border)" }}
+                    >
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr style={{ background: "var(--color-anu-elevated)" }}>
+                            {[
+                              t("boxes.bl_col_no"),
+                              t("boxes.bl_col_line"),
+                              t("boxes.bl_ats"),
+                              t("boxes.bl_print"),
+                              t("boxes.bl_cam"),
+                              t("boxes.bl_total"),
+                              t("boxes.bl_col_recordedby"),
+                              t("boxes.bl_col_date"),
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                className="px-4 py-3 text-left font-medium whitespace-nowrap"
+                                style={{
+                                  color: "var(--color-anu-muted)",
+                                  borderBottom: "1px solid var(--color-anu-border)",
+                                }}
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {backlogs.map((row, i) => (
+                            <tr
+                              key={row.id}
+                              style={{
+                                background:
+                                  i % 2 === 0
+                                    ? "var(--color-anu-surface)"
+                                    : "var(--color-anu-void)",
+                                borderTop: "1px solid var(--color-anu-border)",
+                              }}
+                            >
+                              <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                                {i + 1}
+                              </td>
+                              <td className="px-4 py-3 font-medium" style={{ color: "var(--color-anu-text)" }}>
+                                {row.line}
+                              </td>
+                              <td className="px-4 py-3" style={{ color: "var(--color-anu-text)" }}>
+                                {row.ats_box}
+                              </td>
+                              <td className="px-4 py-3" style={{ color: "var(--color-anu-text)" }}>
+                                {row.print_box}
+                              </td>
+                              <td className="px-4 py-3" style={{ color: "var(--color-anu-text)" }}>
+                                {row.cam_box}
+                              </td>
+                              <td
+                                className="px-4 py-3 font-bold"
+                                style={{ color: "var(--color-anu-warning)" }}
+                              >
+                                {row.total_backlog}
+                              </td>
+                              <td className="px-4 py-3 text-xs" style={{ color: "var(--color-anu-muted)" }}>
+                                {displayName(row.recorded_by, names)}
+                              </td>
+                              <td
+                                className="px-4 py-3 text-xs whitespace-nowrap"
+                                style={{ color: "var(--color-anu-muted)" }}
+                              >
+                                {formatDateTime(row.recorded_at)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </>
                 )}

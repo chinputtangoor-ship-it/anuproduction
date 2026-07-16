@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AppIcon } from "@/components/AppIcon";
 import { ProductionFlowShell } from "@/components/ProductionFlowShell";
 import { STATUS_COLORS } from "@/lib/constants/production";
@@ -15,7 +14,6 @@ import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 
 export default function RecordPage() {
-  const router = useRouter();
   const { t } = useI18n();
   const { user, loading } = useRequireAuth();
 
@@ -110,17 +108,6 @@ export default function RecordPage() {
       lineCols={6}
       batchCols={4}
       onBatchReady={handleBatchReady}
-      headerExtra={
-        <button
-          type="button"
-          onClick={() => router.push("/boxes")}
-          className="ml-auto text-sm px-3 py-1.5 rounded-lg border transition hover:opacity-80 inline-flex items-center gap-1.5"
-          style={cardStyle}
-        >
-          <AppIcon name="clipboard" size={14} />
-          {t("common.view_info")}
-        </button>
-      }
     >
       {({ batch }) => (
         <div className="flex flex-col gap-4">

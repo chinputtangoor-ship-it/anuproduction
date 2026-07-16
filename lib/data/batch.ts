@@ -48,6 +48,18 @@ export type BatchRejection = {
   created_at: string | null;
 };
 
+export type BatchBacklog = {
+  id: string;
+  line: string;
+  batch: string;
+  ats_box: number;
+  print_box: number;
+  cam_box: number;
+  total_backlog: number;
+  recorded_by: string | null;
+  recorded_at: string;
+};
+
 export type BoxChangeLog = {
   id: string;
   box_id: string;
@@ -64,6 +76,7 @@ export type BatchDetail = {
   plan: BatchPlan | null;
   boxes: BatchBox[];
   rejections: BatchRejection[];
+  backlogs: BatchBacklog[];
   names: Record<string, string>;
 };
 
@@ -85,18 +98,26 @@ function toDisplay(value: unknown): string | null {
 
 export async function fetchBatchDetail(batch: string): Promise<BatchDetail> {
   const trimmed = batch.trim();
-  const [{ data: plan }, { data: boxes }, { data: rejections }] = await Promise.all([
-    supabase.from("production_plan").select("*").eq("batch", trimmed).maybeSingle(),
-    supabase.from("boxes").select("*").eq("batch", trimmed).order("box_number"),
-    supabase.from("rejection").select("*").eq("batch", trimmed).order("created_at"),
-  ]);
+  const [{ data: plan }, { data: boxes }, { data: rejections }, { data: backlogs }] =
+    await Promise.all([
+      supabase.from("production_plan").select("*").eq("batch", trimmed).maybeSingle(),
+      supabase.from("boxes").select("*").eq("batch", trimmed).order("box_number"),
+      supabase.from("rejection").select("*").eq("batch", trimmed).order("created_at"),
+      supabase
+        .from("backlog")
+        .select("id, line, batch, ats_box, print_box, cam_box, total_backlog, recorded_by, recorded_at")
+        .eq("batch", trimmed)
+        .order("recorded_at"),
+    ]);
 
   const boxRows = (boxes ?? []) as BatchBox[];
   const rejRows = (rejections ?? []) as BatchRejection[];
+  const backlogRows = (backlogs ?? []) as BatchBacklog[];
 
   const ids = [
     ...boxRows.flatMap((b) => [b.weight_by, b.check_by, b.recorded_by, b.updated_by]),
     ...rejRows.map((r) => r.check_by),
+    ...backlogRows.map((b) => b.recorded_by),
   ].filter((id): id is string => Boolean(id));
 
   const names = await fetchProfileNames(ids);
@@ -105,6 +126,7 @@ export async function fetchBatchDetail(batch: string): Promise<BatchDetail> {
     plan: (plan as BatchPlan | null) ?? null,
     boxes: boxRows,
     rejections: rejRows,
+    backlogs: backlogRows,
     names,
   };
 }
