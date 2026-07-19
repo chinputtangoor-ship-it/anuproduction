@@ -91,18 +91,21 @@ export default function PlannerDashboardPage() {
                   <BarChart data={kpis.byLine}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-anu-border)" />
                     <XAxis dataKey="line" tick={{ fill: "var(--color-anu-muted)", fontSize: 11 }} />
-                    <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} allowDecimals={false} />
+                    <YAxis tick={{ fill: "var(--color-anu-muted)", fontSize: 11 }} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
-                        background: "#1e2230",
-                        border: "1px solid #2e3450",
+                        background: "var(--color-anu-elevated)",
+                        border: "1px solid var(--color-anu-border)",
                         borderRadius: 8,
+                        color: "var(--color-anu-text)",
                       }}
+                      labelStyle={{ color: "var(--color-anu-text)", fontWeight: 600 }}
+                      itemStyle={{ color: "var(--color-anu-text)" }}
                     />
-                    <Legend />
-                    <Bar dataKey="planing" name="Planing" stackId="s" fill="#7c5cff" />
-                    <Bar dataKey="running" name="Running" stackId="s" fill="#00d4aa" />
-                    <Bar dataKey="finished" name="Finished" stackId="s" fill="#64748b" />
+                    <Legend wrapperStyle={{ color: "var(--color-anu-muted)" }} />
+                    <Bar dataKey="planing" name="Planing" stackId="s" fill="var(--color-anu-accent)" />
+                    <Bar dataKey="running" name="Running" stackId="s" fill="var(--color-anu-success)" />
+                    <Bar dataKey="finished" name="Finished" stackId="s" fill="var(--color-anu-muted)" />
                   </BarChart>
                 </ResponsiveContainer>
               )}

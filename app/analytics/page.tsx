@@ -323,7 +323,7 @@ export default function AnalyticsPage() {
 
         {/* Filter Bar */}
         <div className="rounded-xl border p-4 mb-6 flex flex-wrap gap-4 items-end"
-             style={{ background: "#0a0c12", borderColor: BORDER }}>
+             style={{ background: SURFACE, borderColor: BORDER }}>
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_line")}</span>
             <select value={filterLine} onChange={e => setFilterLine(e.target.value)}
@@ -677,11 +677,7 @@ export default function AnalyticsPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
                         <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 10 }} />
                         <YAxis tick={{ fill: MUTED, fontSize: 10 }} />
-                        <Tooltip
-                          contentStyle={{ background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8 }}
-                          labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
-                          itemStyle={{ color: "#e2e8f0" }}
-                        />
+                        <Tooltip {...TOOLTIP_STYLE} />
                         <Bar dataKey="backlog" radius={[3, 3, 0, 0]}>
                           {lineStats.filter(s => s.bl > 0).map((s, i) => (
                             <Cell key={i} fill={s.bl > 10 ? DANGER : s.bl > 5 ? WARNING : SUCCESS} />
@@ -717,11 +713,7 @@ export default function AnalyticsPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
                         <XAxis dataKey="line" tick={{ fill: MUTED, fontSize: 10 }} />
                         <YAxis tick={{ fill: MUTED, fontSize: 10 }} />
-                        <Tooltip
-                          contentStyle={{ background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8 }}
-                          labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
-                          itemStyle={{ color: "#e2e8f0" }}
-                        />
+                        <Tooltip {...TOOLTIP_STYLE} />
                         <Bar dataKey="count" fill={WARNING} radius={[3, 3, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -790,11 +782,7 @@ export default function AnalyticsPage() {
                             <Cell key={i} fill={DEFECT_COLORS[i % DEFECT_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{ background: "#1e2230", border: "1px solid #2e3450", borderRadius: 8 }}
-                          labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
-                          itemStyle={{ color: "#e2e8f0" }}
-                        />
+                        <Tooltip {...TOOLTIP_STYLE} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -808,7 +796,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        <p className="text-center text-xs mt-8" style={{ color: "#2a3550" }}>
+        <p className="text-center text-xs mt-8" style={{ color: MUTED }}>
           {t("analytics.footer_updated")}: {new Date().toLocaleString("th-TH")} · Production Tracking System
         </p>
       </div>

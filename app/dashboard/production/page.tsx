@@ -64,7 +64,11 @@ export default function ProductionDashboardPage() {
       line: r.line,
       pct: parseFloat(r.progressPct.toFixed(1)),
       color:
-        r.progressPct >= 90 ? "#00d4aa" : r.progressPct >= 60 ? "#ffa502" : "#ff4757",
+        r.progressPct >= 90
+          ? "var(--color-anu-success)"
+          : r.progressPct >= 60
+            ? "var(--color-anu-warning)"
+            : "var(--color-anu-danger)",
     }));
 
   return (
@@ -138,14 +142,17 @@ export default function ProductionDashboardPage() {
                   <YAxis
                     tickFormatter={(v) => `${v}%`}
                     domain={[0, 110]}
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
+                    tick={{ fill: "var(--color-anu-muted)", fontSize: 11 }}
                   />
                   <Tooltip
                     contentStyle={{
-                      background: "#1e2230",
-                      border: "1px solid #2e3450",
+                      background: "var(--color-anu-elevated)",
+                      border: "1px solid var(--color-anu-border)",
                       borderRadius: 8,
+                      color: "var(--color-anu-text)",
                     }}
+                    labelStyle={{ color: "var(--color-anu-text)", fontWeight: 600 }}
+                    itemStyle={{ color: "var(--color-anu-text)" }}
                     formatter={(v: any) => [`${v}%`]}
                   />
                   <Bar dataKey="pct" name="Progress" radius={[4, 4, 0, 0]}>

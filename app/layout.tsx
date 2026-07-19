@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   applicationName: "ANU Production",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "ANU Production",
   },
   formatDetection: {
@@ -34,21 +34,21 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f1f5f9" },
-    { color: "#0D0D0D" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D0D0D" },
+    { color: "#f1f5f9" },
   ],
-  colorScheme: "dark light",
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
 };
 
-const themeInitScript = `(function(){try{var t=localStorage.getItem("anu_theme");document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`;
+const themeInitScript = `(function(){try{var t=localStorage.getItem("anu_theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th" data-theme="dark" suppressHydrationWarning>
+    <html lang="th" data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

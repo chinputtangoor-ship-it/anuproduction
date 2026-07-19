@@ -126,10 +126,13 @@ export default function QualityDashboardPage() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        background: "#1e2230",
-                        border: "1px solid #2e3450",
+                        background: "var(--color-anu-elevated)",
+                        border: "1px solid var(--color-anu-border)",
                         borderRadius: 8,
+                        color: "var(--color-anu-text)",
                       }}
+                      labelStyle={{ color: "var(--color-anu-text)", fontWeight: 600 }}
+                      itemStyle={{ color: "var(--color-anu-text)" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -151,16 +154,19 @@ export default function QualityDashboardPage() {
                       type="category"
                       dataKey="name"
                       width={80}
-                      tick={{ fill: "#94a3b8", fontSize: 10 }}
+                      tick={{ fill: "var(--color-anu-muted)", fontSize: 10 }}
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "#1e2230",
-                        border: "1px solid #2e3450",
+                        background: "var(--color-anu-elevated)",
+                        border: "1px solid var(--color-anu-border)",
                         borderRadius: 8,
+                        color: "var(--color-anu-text)",
                       }}
+                      labelStyle={{ color: "var(--color-anu-text)", fontWeight: 600 }}
+                      itemStyle={{ color: "var(--color-anu-text)" }}
                     />
-                    <Bar dataKey="count" fill="#ff4757" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" fill="var(--color-anu-danger)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

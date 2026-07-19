@@ -28,7 +28,8 @@ function readStoredTheme(): ThemeMode {
   if (typeof window === "undefined") return DEFAULT_THEME;
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return stored === "light" ? "light" : DEFAULT_THEME;
+    if (stored === "dark" || stored === "light") return stored;
+    return DEFAULT_THEME;
   } catch {
     return DEFAULT_THEME;
   }
