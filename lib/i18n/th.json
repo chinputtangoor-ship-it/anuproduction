@@ -57,7 +57,35 @@
     "planner_dash": "แดชบอร์ด Planner",
     "quality_dash": "แดชบอร์ด Quality",
     "production_dash": "แดชบอร์ด Production",
-    "post_dash": "แดชบอร์ด Post Production"
+    "post_dash": "แดชบอร์ด Post Production",
+    "features": "ฟีเจอร์"
+  },
+  "features": {
+    "title": "เปิด/ปิดฟีเจอร์",
+    "subtitle": "เฉพาะ Admin — เปิดปิดฟีเจอร์แพลตฟอร์มได้ทันทีโดยไม่ต้อง deploy ใหม่",
+    "on": "เปิด",
+    "off": "ปิด",
+    "realtime": "Realtime",
+    "realtime_desc": "อัปเดตจอทันทีเมื่อกล่อง แผน หรือข้อมูลที่เกี่ยวข้องเปลี่ยน",
+    "pwa_banner": "แถบติดตั้ง PWA",
+    "pwa_banner_desc": "แสดงแถบติดตั้ง 20 วินาทีบนเบราว์เซอร์ที่ติดตั้งแอปได้",
+    "single_session": "หนึ่ง session ต่อผู้ใช้",
+    "single_session_desc": "login ได้ทีละเครื่อง — ถามเมื่อเข้าจากเครื่องอื่น",
+    "swr": "แคช SWR",
+    "swr_desc": "โชว์ข้อมูลเก่าในเครื่องทันที แล้วดึงข้อมูลใหม่เบื้องหลัง"
+  },
+  "session": {
+    "conflict_title": "มีการเข้าสู่ระบบที่เครื่องอื่น",
+    "conflict_body": "บัญชีนี้กำลังใช้งานอยู่ที่อื่น จะใช้เครื่องนี้ หรือคงเครื่องเดิม?",
+    "use_new": "ใช้เครื่องนี้",
+    "keep_old": "คงเครื่องเดิม",
+    "kicked": "คุณถูกออกจากระบบ เพราะมีการเข้าสู่ระบบที่เครื่องอื่น"
+  },
+  "pwa": {
+    "install_title": "ติดตั้ง ANU Production",
+    "install_body": "เพิ่มลงเครื่องเพื่อเปิดใช้บนโรงงานได้เร็วขึ้น",
+    "install_btn": "ติดตั้ง",
+    "dismiss": "ไว้ทีหลัง"
   },
   "dept_dash": {
     "planner_title": "แดชบอร์ด Planner",
@@ -360,9 +388,10 @@
     "download_template": "ดาวน์โหลดเทมเพลต Excel",
     "import_excel": "นำเข้าจาก Excel",
     "importing": "กำลังนำเข้า...",
-    "import_hint": "คอลัมน์ใน Excel ต้องตรงกับเทมเพลตทุกคอลัมน์ แถวที่ผิดจะถูกปฏิเสธพร้อมเลขแถว",
+    "import_hint": "คอลัมน์ตามเทมเพลต (รองรับชื่อใกล้เคียง) · ค่าในตัวอย่าง = แค่รูปแบบ ไม่จำกัดค่า · เช่น Item Qty ใส่ 5 / 20 / 50 ได้ · Print ว่าง → U · แถวถูกนำเข้า แถวผิดรายงาน",
     "import_success": "นำเข้าแผน {{count}} แถวแล้ว",
-    "import_errors": "นำเข้าไม่สำเร็จ — แก้แถวเหล่านี้:",
+    "import_partial": "นำเข้า {{ok}} แถว · ข้าม {{fail}} แถวที่มีปัญหา:",
+    "import_errors": "ปัญหาการนำเข้า:",
     "import_row_error": "แถว {{row}}: {{message}}",
     "import_missing_columns": "คอลัมน์ที่จำเป็นขาดหาย",
     "import_no_rows": "ไม่พบข้อมูลในไฟล์",

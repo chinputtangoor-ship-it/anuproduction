@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { KpiCard } from "@/components/dashboard/KpiCard";
+import { LinePeriodFilter } from "@/components/dashboard/LinePeriodFilter";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useDashboardPlans } from "@/hooks/useDashboardData";
+import {
+  filterByLineAndPeriod,
+  todayIso,
+  type CustomRange,
+  type PeriodKey,
+} from "@/lib/calculations/period";
 import { computePlannerKpis } from "@/lib/calculations/planner-kpis";
-import { fetchDashboardPlans } from "@/lib/data/dashboard";
 import { useI18n } from "@/lib/i18n/context";
 import {
   Bar,
@@ -22,26 +30,27 @@ import {
 export default function PlannerDashboardPage() {
   const { t } = useI18n();
   const { user, loading: authLoading } = useRequireAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [kpis, setKpis] = useState<ReturnType<typeof computePlannerKpis> | null>(null);
+  const { data: plans = [], error: swrError, isLoading } = useDashboardPlans();
+  const [line, setLine] = useState("All");
+  const [period, setPeriod] = useState<PeriodKey>("Today");
+  const [custom, setCustom] = useState<CustomRange>({
+    start: todayIso(),
+    end: todayIso(),
+    startTime: "07:00",
+    endTime: "19:00",
+  });
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const plans = await fetchDashboardPlans();
-        setKpis(computePlannerKpis(plans));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Load failed");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [authLoading, user]);
+  const kpis = useMemo(() => {
+    const filtered = filterByLineAndPeriod(plans as Record<string, unknown>[], {
+      line,
+      period,
+      timeKey: "updated_at",
+      custom: period === "Custom" ? custom : null,
+    });
+    return computePlannerKpis(filtered as Parameters<typeof computePlannerKpis>[0]);
+  }, [plans, line, period, custom]);
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <DashboardSkeleton />;
 
   const cardStyle = {
     background: "var(--color-anu-surface)",
@@ -50,15 +59,22 @@ export default function PlannerDashboardPage() {
 
   return (
     <DashboardShell title={t("dept_dash.planner_title")} icon="calendar">
-      {loading && (
-        <p style={{ color: "var(--color-anu-muted)" }}>{t("common.loading")}</p>
-      )}
-      {error && (
+      <LinePeriodFilter
+        line={line}
+        period={period}
+        onLineChange={setLine}
+        onPeriodChange={setPeriod}
+        custom={custom}
+        onCustomChange={setCustom}
+      />
+
+      {isLoading && !plans.length && <DashboardSkeleton />}
+      {swrError && (
         <p className="text-sm mb-4" style={{ color: "var(--color-anu-danger)" }}>
-          {error}
+          {swrError.message}
         </p>
       )}
-      {!loading && kpis && (
+      {(!isLoading || plans.length > 0) && (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <KpiCard label={t("dept_dash.total_plans")} value={kpis.total} />

@@ -6,6 +6,7 @@ import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 export default function BacklogPage() {
   const { t } = useI18n();
@@ -136,7 +137,7 @@ export default function BacklogPage() {
     },
   ];
 
-  if (loading || !user) return null;
+  if (loading || !user) return <FormSkeleton />;
 
   return (
     <ProductionFlowShell

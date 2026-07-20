@@ -3,18 +3,31 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/pages/Logo";
+import { SessionConflictDialog } from "@/components/auth/SessionConflictDialog";
 import { usernameToAuthEmail } from "@/lib/auth/email";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import {
+  checkOrClaimSession,
+  claimSessionOnThisDevice,
+} from "@/lib/auth/claim-session";
 import { createClient } from "@/lib/supabase/client";
+import { useFeatureFlag } from "@/lib/features/FeatureFlagsProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LangToggle } from "@/lib/i18n/LangToggle";
 import { useI18n } from "@/lib/i18n/context";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, refresh } = useAuth();
+  const {
+    user,
+    loading: authLoading,
+    refresh,
+    sessionMessage,
+    clearSessionMessage,
+  } = useAuth();
   const { t } = useI18n();
   const supabase = createClient();
+  const singleSession = useFeatureFlag("single_session");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -27,18 +40,56 @@ export default function LoginPage() {
   const [pwError, setPwError] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [conflict, setConflict] = useState<{ otherLabel?: string } | null>(null);
+  const [sessionBusy, setSessionBusy] = useState(false);
+  const [awaitingSession, setAwaitingSession] = useState(false);
+
   useEffect(() => {
-    if (!authLoading && user && !user.first_login) {
+    if (sessionMessage) {
+      setError(sessionMessage);
+      clearSessionMessage();
+    }
+  }, [sessionMessage, clearSessionMessage]);
+
+  useEffect(() => {
+    if (authLoading || awaitingSession || conflict) return;
+    if (user && !user.first_login) {
       router.replace("/dashboard");
     }
-    if (!authLoading && user?.first_login) {
+    if (user?.first_login) {
       setShowChangePw(true);
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, awaitingSession, conflict]);
+
+  async function finishWithSession() {
+    if (!singleSession) {
+      router.push("/dashboard");
+      return;
+    }
+
+    setAwaitingSession(true);
+    try {
+      const result = await checkOrClaimSession();
+      if (result.status === "conflict") {
+        setConflict({ otherLabel: result.otherDeviceLabel });
+        setAwaitingSession(false);
+        return;
+      }
+      if (result.status === "error") {
+        // Columns may not exist yet — allow login
+        console.warn(result.message);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    setAwaitingSession(false);
+    router.push("/dashboard");
+  }
 
   async function handleLogin() {
     setLoading(true);
     setError("");
+    setConflict(null);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: usernameToAuthEmail(username),
@@ -80,7 +131,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    await finishWithSession();
   }
 
   async function handleChangePassword() {
@@ -110,7 +161,30 @@ export default function LoginPage() {
 
     await refresh();
     setPwSaving(false);
-    router.push("/dashboard");
+    setShowChangePw(false);
+    await finishWithSession();
+  }
+
+  async function handleUseNew() {
+    setSessionBusy(true);
+    try {
+      await claimSessionOnThisDevice();
+      setConflict(null);
+      router.push("/dashboard");
+    } catch {
+      setError(t("common.error"));
+    }
+    setSessionBusy(false);
+  }
+
+  async function handleKeepOld() {
+    setSessionBusy(true);
+    setConflict(null);
+    await supabase.auth.signOut();
+    await refresh();
+    setAwaitingSession(false);
+    setSessionBusy(false);
+    setError(t("session.keep_old"));
   }
 
   const inputCls = "rounded-lg border px-3 py-2.5 text-sm outline-none transition w-full";
@@ -127,6 +201,15 @@ export default function LoginPage() {
         <LangToggle />
       </div>
 
+      {conflict && (
+        <SessionConflictDialog
+          otherLabel={conflict.otherLabel}
+          onUseNew={handleUseNew}
+          onKeepOld={handleKeepOld}
+          busy={sessionBusy}
+        />
+      )}
+
       {showChangePw && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -137,13 +220,11 @@ export default function LoginPage() {
             style={{ background: "var(--color-anu-surface)", borderColor: "var(--color-anu-glow)" }}
           >
             <div className="text-center">
-              <p className="text-2xl mb-1">🔐</p>
               <h2 className="text-base font-bold" style={{ color: "var(--color-anu-text)" }}>
                 {t("login.change_pw_title")}
               </h2>
               <p className="text-xs mt-1" style={{ color: "var(--color-anu-muted)" }}>
-                {user?.username ?? username}{" "}
-                {t("login.change_pw_subtitle")}
+                {user?.username ?? username} {t("login.change_pw_subtitle")}
               </p>
             </div>
 
@@ -186,7 +267,7 @@ export default function LoginPage() {
             <button
               onClick={handleChangePassword}
               disabled={pwSaving || !newPw || !confirmPw}
-              className="rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 min-h-[44px]"
               style={{ background: "var(--color-anu-accent)", color: "#fff" }}
             >
               {pwSaving ? t("login.saving_pw") : t("login.save_pw")}
@@ -257,11 +338,11 @@ export default function LoginPage() {
 
           <button
             onClick={handleLogin}
-            disabled={loading}
-            className="mt-1 rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
+            disabled={loading || awaitingSession}
+            className="mt-1 rounded-lg py-2.5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50 min-h-[44px]"
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}
           >
-            {loading ? t("login.logging_in") : t("login.login_btn")}
+            {loading || awaitingSession ? t("login.logging_in") : t("login.login_btn")}
           </button>
         </div>
 

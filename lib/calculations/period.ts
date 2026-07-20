@@ -4,7 +4,15 @@ export type PeriodKey =
   | "Day shift (07-19)"
   | "Night shift (19-07)"
   | "Last 7 days"
-  | "Last 30 days";
+  | "Last 30 days"
+  | "Custom";
+
+export type CustomRange = {
+  start: string;
+  end: string;
+  startTime: string;
+  endTime: string;
+};
 
 export function filterByLineAndPeriod<T extends Record<string, unknown>>(
   data: T[],
@@ -13,7 +21,7 @@ export function filterByLineAndPeriod<T extends Record<string, unknown>>(
     lineKey?: string;
     timeKey?: string;
     period?: PeriodKey;
-    custom?: { start: string; end: string; startTime: string; endTime: string } | null;
+    custom?: CustomRange | null;
   },
 ): T[] {
   const lineKey = opts.lineKey ?? "line";
@@ -26,7 +34,17 @@ export function filterByLineAndPeriod<T extends Record<string, unknown>>(
   const timeKey = opts.timeKey;
   if (!timeKey) return rows;
 
-  if (opts.custom) {
+  if (opts.period === "Custom" && opts.custom) {
+    const from = new Date(`${opts.custom.start}T${opts.custom.startTime}:00`);
+    const to = new Date(`${opts.custom.end}T${opts.custom.endTime}:00`);
+    return rows.filter((r) => {
+      const t = new Date(String(r[timeKey]));
+      return t >= from && t <= to;
+    });
+  }
+
+  // Legacy: custom object without period === Custom
+  if (opts.custom && opts.period !== "Custom") {
     const from = new Date(`${opts.custom.start}T${opts.custom.startTime}:00`);
     const to = new Date(`${opts.custom.end}T${opts.custom.endTime}:00`);
     return rows.filter((r) => {
@@ -36,7 +54,7 @@ export function filterByLineAndPeriod<T extends Record<string, unknown>>(
   }
 
   const period = opts.period ?? "All";
-  if (period === "All") return rows;
+  if (period === "All" || period === "Custom") return rows;
 
   const now = new Date();
   if (period === "Day shift (07-19)") {
@@ -69,4 +87,8 @@ export function filterByLineAndPeriod<T extends Record<string, unknown>>(
 export function startOfToday(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+export function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
 }

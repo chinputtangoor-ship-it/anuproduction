@@ -8,6 +8,7 @@ import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"];
 const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
@@ -198,7 +199,7 @@ export default function RepassPage() {
     t("repass.col_complete"), t("repass.col_done_by"),
   ];
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <FormSkeleton />;
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>

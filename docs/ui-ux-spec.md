@@ -211,7 +211,7 @@ Box no. · Box Status · Defects · Net (kg) · Total (kg) · Weight by · Check
 
 ---
 
-## PWA (Phase 6)
+## PWA (Phase 6 + 9)
 
 | รายการ | ข้อกำหนด |
 |--------|----------|
@@ -219,9 +219,48 @@ Box no. · Box Status · Defects · Net (kg) · Total (kg) · Weight by · Check
 | `manifest.webmanifest` | name, short_name, theme/background, start_url, display standalone |
 | Icons | ใช้ `public/icons/icon-192.png` และ `icon-512.png` (+ maskable จากโลโก้เดียวกัน) |
 | Install | ติดตั้งลงเครื่องได้ (Android / desktop Chromium) |
+| Install banner (Phase 9) | แถบด้านล่าง/บนพร้อมไอคอน `Download` · โชว์ **20 วินาที** แล้ว fade ออก · ถ้า `display-mode: standalone` หรือเคยติดตั้ง/dismiss แล้ว → **ไม่โชว์อีก** |
 | Offline | อย่างน้อย app shell; คิว sync ถ้าจะทำ offline กรอก — ตกลงก่อนลงมือ |
 
 ไอคอนต้องเป็น **สัญลักษณ์แบรนด์ ANU Production จากไฟล์โลโก้จริง** — ไม่ใช้ emoji เป็นไอคอนแอป  
+
+---
+
+## Phase 9 UX
+
+### Single session dialog
+
+หลัง login สำเร็จ ถ้ามี session ที่เครื่องอื่น: modal ถาม
+
+- **ใช้เครื่องใหม่** — เครื่องเก่าถูกบังคับ logout  
+- **คงเครื่องเดิม** — ยกเลิก login เครื่องใหม่  
+
+ข้อความสั้น TH/EN · ปุ่มใหญ่ ≥ 44px  
+
+### Loading skeleton
+
+- ใช้ shimmer/`animate-pulse` ตาม token `anu-elevated`  
+- รูปแบบ: Page / Dashboard KPI cards / Form / Table  
+- ห้ามจอขาวตอน auth หรือ fetch  
+
+### Dashboard date filter (ร่วม)
+
+Planner · Quality · Production · Post Production (`/analytics`) ใช้ตัวกรองเดียวกัน:
+
+- Line  
+- Period: All / Today / Day shift / Night shift / Last 7 / Last 30 / **Custom**  
+- Custom = from/to วันที่ + เวลา (default 07:00–19:00)  
+
+### Admin Feature Toggle
+
+- เมนู **Features** เห็นเฉพาะ `admin`  
+- Toggle: Realtime · PWA banner · Single session · SWR cache  
+- Role อื่นห้ามเห็นแม้พิมพ์ URL  
+
+### Excel import feedback
+
+- สำเร็จ X แถว / ผิด Y แถว + รายการ error  
+- Hint: ค่าในตัวอย่าง = **แค่รูปแบบ** · Item Qty = ล้าน (เลขใดก็ได้ เช่น `5`/`20`/`50`) · Need AF = กล่อง · Print ว่าง = U
 
 ---
 
@@ -229,7 +268,7 @@ Box no. · Box Status · Defects · Net (kg) · Total (kg) · Weight by · Check
 
 - ข้อความสั้น ภาษาง่าย  
 - Error บอกว่าแก้ยังไง (เช่น “คอลัมน์ Size หายไปจากไฟล์ Excel”)  
-- ห้าม white screen — ใช้ empty / error state  
+- ห้าม white screen — ใช้ empty / error state / skeleton  
 
 ---
 

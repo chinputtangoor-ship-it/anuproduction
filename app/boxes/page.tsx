@@ -21,6 +21,7 @@ import {
   statusNeedsDefect,
 } from "@/lib/constants/production";
 import { useI18n } from "@/lib/i18n/context";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 const STATUS_COLORS: Record<string, string> = {
   AF: "var(--color-anu-success)",
@@ -90,7 +91,7 @@ export default function BoxesPage() {
     borderColor: "var(--color-anu-border)",
   };
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <TableSkeleton />;
 
   async function handleSearch() {
     if (!searchBatch.trim()) return;

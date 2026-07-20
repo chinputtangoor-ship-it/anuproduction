@@ -9,6 +9,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { withRecordedBy } from "@/lib/audit/stamp";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 export default function QualityPage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -87,7 +88,7 @@ export default function QualityPage() {
     borderColor: "var(--color-anu-border)",
   };
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <FormSkeleton />;
 
   return (
     <ProductionFlowShell

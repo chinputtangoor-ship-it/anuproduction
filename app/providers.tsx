@@ -1,10 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { SWRConfig } from "swr";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { PwaRegister } from "@/components/PwaRegister";
+import { InstallBanner } from "@/components/pwa/InstallBanner";
+import { SessionGuard } from "@/components/auth/SessionGuard";
 import { Sidebar } from "@/components/Sidebar";
 import { AuthProvider, useAuth } from "@/lib/auth/AuthProvider";
+import { FeatureFlagsProvider } from "@/lib/features/FeatureFlagsProvider";
 import { I18nProvider } from "@/lib/i18n/context";
 import { ThemeProvider } from "@/lib/theme/context";
 
@@ -13,9 +17,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <I18nProvider>
         <AuthProvider>
-          <PwaRegister />
-          <GlobalHeader />
-          <AppBody>{children}</AppBody>
+          <FeatureFlagsProvider>
+            <SWRConfig
+              value={{
+                revalidateOnFocus: true,
+                shouldRetryOnError: true,
+                errorRetryCount: 2,
+              }}
+            >
+              <SessionGuard>
+                <PwaRegister />
+                <InstallBanner />
+                <GlobalHeader />
+                <AppBody>{children}</AppBody>
+              </SessionGuard>
+            </SWRConfig>
+          </FeatureFlagsProvider>
         </AuthProvider>
       </I18nProvider>
     </ThemeProvider>

@@ -1,7 +1,7 @@
 # ANU Production — Roadmap
 
-> Version: 1.1 · อ้างอิง owner brief + [decisions.md](./decisions.md) (2026-07-16)  
-> เป้าหมาย: flow โรงงานมาตรฐาน · แยกแผนก · audit ได้ · PWA  
+> Version: 1.2 · อ้างอิง owner brief + [decisions.md](./decisions.md) (2026-07-20)  
+> เป้าหมาย: flow โรงงานมาตรฐาน · แยกแผนก · audit ได้ · PWA · platform hardening  
 > Cursor rule: `.cursor/rules/anu-production.mdc` · UX: [ui-ux-spec.md](./ui-ux-spec.md) · QA: [qa-skill.md](./qa-skill.md)
 
 ---
@@ -17,6 +17,7 @@
 | 4 | Batch 360° + Rejection by line | ✅ Done | หน้า batch · ประวัติกล่อง · กราฟ by line |
 | 5 | Department Dashboards | ✅ Done | Planner/Quality/Production/Post Production |
 | 6 | PWA & App identity | ✅ Done | manifest · icons · install · offline shell |
+| 9 | Platform Hardening | ✅ Done | Excel flexible · single session · PWA banner · skeleton · date filters · SWR · Realtime · feature flags |
 | 7 | Warehouse / HR / Account | ⏸️ พัก | Dashboard ยังไม่ทำ |
 | 8 | Deep Odoo accounting bridge | ⏸️ หลังบ้านบัญชีเต็ม | หลัง flow หลักนิ่ง |
 
@@ -201,6 +202,38 @@ Line · Size · Batch · SAP Batch · Prod. Order · Sales Order · SO Item · F
 
 ---
 
+## Phase 9 — Platform Hardening
+
+**เป้าหมาย:** แอปเร็วขึ้น · ข้อมูลสด · import ยืดหยุ่น · session ปลอดภัย · Admin คุมฟีเจอร์ได้โดยไม่ redeploy
+
+| ID | งาน | รายละเอียด |
+|----|-----|------------|
+| 9.1 | Excel flexible import | aliases · วันที่หลายรูปแบบ · แถวว่างได้ตาม D11 · partial import |
+| 9.2 | Single session | 1 login 1 session · dialog ข้ามเครื่อง |
+| 9.3 | PWA install banner | โชว์ 20 วิ แล้ว fade · ติดตั้งแล้วไม่โชว์ |
+| 9.4 | Loading skeletons | ทุกหน้าหลัก |
+| 9.5 | Dashboard date filters | Planner / Production / Quality = แบบ Post Production (incl. Custom) |
+| 9.6 | SWR | client cache stale-while-revalidate |
+| 9.7 | Supabase Realtime | ตารางร้อน · mutate SWR · คุมด้วย flag |
+| 9.8 | Feature Toggle | Admin-only Settings · ไม่ต้อง redeploy |
+
+**Exit criteria**
+
+- [x] Import ตัวอย่างวันที่หลายรูปแบบได้ · แถวผิดรายงาน · แถวถูกเข้า
+- [x] Login เครื่องที่สองถาม Use new / Keep old
+- [x] PWA banner 20s · standalone ไม่โชว์
+- [x] หน้าหลักมี skeleton ตอนโหลด
+- [x] 3 dept dashboards มี period + Custom
+- [x] SWR + Realtime (เมื่อ flag เปิด) อัปเดตจอหลังบันทึก/เปลี่ยนข้อมูล
+- [x] Admin เห็น Features · role อื่นไม่เห็นเมนู/API
+- [x] QC Form ไม่ถูกแตะ
+
+> **Deploy note:** รัน migration `supabase/migrations/20260720100000_phase9_platform.sql` บน Supabase ก่อนใช้ Features / Single session / Realtime
+
+**ไม่ทำใน Phase นี้:** QC Form · Warehouse/HR/Account dashboards · offline form sync queue
+
+---
+
 ## Phase 7 — Warehouse / HR / Account (พัก)
 
 - รับวัตถุดิบ / รับ FG / ส่งลูกค้า (Warehouse) — ออกแบบหลัง flow 1–6 นิ่ง
@@ -227,6 +260,7 @@ Phase 1 Foundations
   → Phase 4 Batch 360 + Rejection by line
   → Phase 5 Dept dashboards
   → Phase 6 PWA
+  → Phase 9 Platform Hardening
   → (พัก) 7–8
 ```
 

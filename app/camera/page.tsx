@@ -7,6 +7,7 @@ import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 type DefectRow = { type: string; qty: string };
 
@@ -137,7 +138,7 @@ export default function CameraPage() {
     setTimeout(resetForm, 1500);
   }
 
-  if (loading || !user) return null;
+  if (loading || !user) return <FormSkeleton />;
 
   const cameras = [
     {

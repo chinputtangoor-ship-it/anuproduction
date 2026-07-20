@@ -9,13 +9,14 @@ import {
   getVisibleSections,
 } from "@/lib/navigation/menu";
 import { useI18n } from "@/lib/i18n/context";
+import { PageSkeleton } from "@/components/ui/Skeleton";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { user, loading } = useRequireAuth();
 
-  if (loading || !user) return null;
+  if (loading || !user) return <PageSkeleton />;
 
   const visibleSections = getVisibleSections(user.role, user.department);
 

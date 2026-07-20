@@ -1,34 +1,17 @@
 import type { PlanFormValues } from "@/lib/constants/plan-form";
-import { BATCH_STATUS } from "@/lib/constants/plan-form";
 import { planFormToPayload } from "@/lib/constants/plan-form";
+import { buildColumnIndex } from "@/lib/plan/column-aliases";
+import { PLAN_EXCEL_HEADERS } from "@/lib/plan/excel-headers";
+import {
+  cellToString,
+  parseBatchStatus,
+  parseDecimalQty,
+  parseFlexibleDate,
+  parsePrintType,
+  parseSize,
+} from "@/lib/plan/value-parsers";
 
-/** Excel header row — must match import file exactly (docs/decisions.md D6). */
-export const PLAN_EXCEL_HEADERS = [
-  "Line",
-  "Size",
-  "Batch",
-  "SAP Batch",
-  "Prod. Order",
-  "Insp. Lot",
-  "Sales Order",
-  "SO Item",
-  "FERT Code",
-  "Semi Code",
-  "Item Qty (K)",
-  "Need AF Box",
-  "Customer",
-  "Country",
-  "Box Packing",
-  "Plan Finish",
-  "To be Desp.",
-  "Metal Det.",
-  "Print",
-  "Ink Cap",
-  "Roller Cap",
-  "Ink Body",
-  "Roller Body",
-  "Status",
-] as const;
+export { PLAN_EXCEL_HEADERS } from "@/lib/plan/excel-headers";
 
 export type PlanImportRowError = {
   row: number;
@@ -36,6 +19,7 @@ export type PlanImportRowError = {
 };
 
 export type PlanImportResult = {
+  /** True when at least one valid row was parsed (partial OK). */
   ok: boolean;
   rows: PlanFormValues[];
   errors: PlanImportRowError[];
@@ -43,41 +27,30 @@ export type PlanImportResult = {
   extraMessage?: string;
 };
 
-function cellToString(value: unknown): string {
-  if (value == null) return "";
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  return String(value).trim();
-}
+type ColIndex = Partial<Record<(typeof PLAN_EXCEL_HEADERS)[number], number>>;
 
-function normalizeDate(value: string): string {
-  if (!value) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const n = Number(value);
-  if (!Number.isNaN(n) && n > 30000 && n < 60000) {
-    const epoch = new Date(Date.UTC(1899, 11, 30));
-    epoch.setUTCDate(epoch.getUTCDate() + Math.floor(n));
-    return epoch.toISOString().slice(0, 10);
-  }
-  const d = new Date(value);
-  if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-  return value;
-}
-
-function rowToForm(cells: unknown[], colIndex: Record<string, number>): PlanFormValues | null {
-  const get = (header: (typeof PLAN_EXCEL_HEADERS)[number]) =>
-    cellToString(cells[colIndex[header]]);
+function rowToForm(cells: unknown[], colIndex: ColIndex): PlanFormValues | null {
+  const get = (header: (typeof PLAN_EXCEL_HEADERS)[number]) => {
+    const idx = colIndex[header];
+    if (idx == null) return "";
+    return cellToString(cells[idx]);
+  };
 
   const batch = get("Batch");
   if (!batch) return null;
 
-  const status = get("Status") || "Planing";
-  if (!BATCH_STATUS.includes(status as (typeof BATCH_STATUS)[number])) {
-    throw new Error(`Invalid Status "${status}" — use Planing, Running, or Finished`);
-  }
+  const status = parseBatchStatus(get("Status"));
+
+  const sizeCell =
+    colIndex["Size"] != null ? cells[colIndex["Size"]!] : get("Size");
+  const itemQtyCell =
+    colIndex["Item Qty (K)"] != null ? cells[colIndex["Item Qty (K)"]!] : get("Item Qty (K)");
+  const needAfCell =
+    colIndex["Need AF Box"] != null ? cells[colIndex["Need AF Box"]!] : get("Need AF Box");
 
   return {
     line: get("Line") || "H501",
-    size: get("Size"),
+    size: parseSize(sizeCell),
     batch,
     sap_batch: get("SAP Batch"),
     production_order: get("Prod. Order"),
@@ -86,18 +59,19 @@ function rowToForm(cells: unknown[], colIndex: Record<string, number>): PlanForm
     sales_order_item: get("SO Item"),
     fert_code: get("FERT Code"),
     semifinish_code: get("Semi Code"),
-    item_qty_million: get("Item Qty (K)"),
-    need_af_box: get("Need AF Box"),
+    item_qty_million: parseDecimalQty(itemQtyCell, "Item Qty (K)"),
+    need_af_box: parseDecimalQty(needAfCell, "Need AF Box"),
     customer_name: get("Customer"),
     country: get("Country"),
     box_packing: get("Box Packing"),
-    planned_finish_date: normalizeDate(get("Plan Finish")),
-    to_be_desp_on: normalizeDate(get("To be Desp.")),
+    planned_finish_date: parseFlexibleDate(cells[colIndex["Plan Finish"] ?? -1] ?? get("Plan Finish")),
+    to_be_desp_on: parseFlexibleDate(cells[colIndex["To be Desp."] ?? -1] ?? get("To be Desp.")),
     metal_detector: get("Metal Det.") || "Normal",
-    print_type: get("Print") || "U",
-    ink_cap: get("Ink Cap") || "-",
+    // D11: Print blank → U; ink / roller may stay blank
+    print_type: parsePrintType(get("Print")),
+    ink_cap: get("Ink Cap"),
     roller_des_cap: get("Roller Cap"),
-    ink_body: get("Ink Body") || "-",
+    ink_body: get("Ink Body"),
     roller_des_body: get("Roller Body"),
     batch_status: status,
   };
@@ -109,21 +83,17 @@ export function parsePlanWorkbook(rows: unknown[][]): PlanImportResult {
   }
 
   const headerRow = rows[0].map((c) => cellToString(c));
-  const missingColumns = PLAN_EXCEL_HEADERS.filter((h) => !headerRow.includes(h));
-  if (missingColumns.length > 0) {
+  const { colIndex, missingRequired } = buildColumnIndex(headerRow);
+
+  if (missingRequired.length > 0) {
     return {
       ok: false,
       rows: [],
       errors: [],
-      missingColumns,
-      extraMessage: `Missing columns: ${missingColumns.join(", ")}`,
+      missingColumns: missingRequired,
+      extraMessage: `Missing columns: ${missingRequired.join(", ")}`,
     };
   }
-
-  const colIndex: Record<string, number> = {};
-  headerRow.forEach((h, i) => {
-    colIndex[h] = i;
-  });
 
   const parsed: PlanFormValues[] = [];
   const errors: PlanImportRowError[] = [];
@@ -149,7 +119,7 @@ export function parsePlanWorkbook(rows: unknown[][]): PlanImportResult {
   }
 
   return {
-    ok: errors.length === 0 && parsed.length > 0,
+    ok: parsed.length > 0,
     rows: parsed,
     errors,
   };
@@ -167,13 +137,59 @@ export async function parsePlanExcelFile(file: File): Promise<PlanImportResult> 
   if (!sheet) {
     return { ok: false, rows: [], errors: [{ row: 0, message: "No worksheet found" }] };
   }
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
+  // raw:false → use Excel display text so Size "00", long IDs, etc. keep shop-floor format
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+  });
   return parsePlanWorkbook(rows);
 }
 
+const SAMPLE_ROW = [
+  "H503",
+  "0",
+  "H503260717",
+  "4900007638",
+  "750000094134",
+  "30000143424",
+  "530903879",
+  "50",
+  "UN78317",
+  "GBRRN-SN-CT0000CT0000-E10",
+  "10",
+  "100",
+  "ACG NORTH AMERICA LLC",
+  "USA",
+  "Box 675",
+  "21.07.2026",
+  "3/8/2026",
+  "Normal",
+  "U",
+  "",
+  "",
+  "",
+  "",
+  "Running",
+];
+
 export async function downloadPlanTemplate(filename = "anu-plan-template.xlsx") {
   const XLSX = await import("xlsx");
-  const ws = XLSX.utils.aoa_to_sheet([PLAN_EXCEL_HEADERS as unknown as string[]]);
+  const notes = [
+    "Sample row = FORMAT examples only — any value with the same shape is OK",
+    "Item Qty (K) = million units; any number e.g. 0.1, 1.2, 5, 10, 20, 50 (0–2 decimals)",
+    "Need AF Box = boxes; any number (0–2 decimals OK)",
+    "Size / codes / customer / packing = free text (not limited to sample values)",
+    "Blank Print → U · Blank OK: Ink Cap, Roller Cap, Ink Body, Roller Body, Status (→ Planing)",
+    "Dates: DD.MM.YYYY · D/M/YYYY · DD-MMM-YY · Excel date",
+    "Status: Planing | Running | Finished only",
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([
+    [...PLAN_EXCEL_HEADERS] as string[],
+    SAMPLE_ROW,
+    [],
+    ["Notes:", ...notes],
+  ]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Plan");
   XLSX.writeFile(wb, filename);

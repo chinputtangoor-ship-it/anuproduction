@@ -8,6 +8,11 @@ export function canManageUsers(role: UserRole): boolean {
   return role === "admin";
 }
 
+/** admin only — feature toggles */
+export function isAdmin(role: UserRole): boolean {
+  return role === "admin";
+}
+
 /** admin + manager — see every department */
 export function canSeeAllDepartments(role: UserRole): boolean {
   return role === "admin" || role === "manager";

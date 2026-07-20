@@ -57,7 +57,35 @@
     "planner_dash": "Planner Dashboard",
     "quality_dash": "Quality Dashboard",
     "production_dash": "Production Dashboard",
-    "post_dash": "Post Production Dashboard"
+    "post_dash": "Post Production Dashboard",
+    "features": "Features"
+  },
+  "features": {
+    "title": "Feature toggles",
+    "subtitle": "Admin only — turn platform features on or off without redeploying.",
+    "on": "On",
+    "off": "Off",
+    "realtime": "Realtime",
+    "realtime_desc": "Live screen updates when boxes, plans, or related data change.",
+    "pwa_banner": "PWA install banner",
+    "pwa_banner_desc": "Show install bar for 20 seconds on browsers that can install the app.",
+    "single_session": "Single session",
+    "single_session_desc": "One login per user — ask when signing in on another device.",
+    "swr": "SWR client cache",
+    "swr_desc": "Show cached data instantly while refreshing from the server."
+  },
+  "session": {
+    "conflict_title": "Signed in on another device",
+    "conflict_body": "This account is already active elsewhere. Use this device or keep the other one?",
+    "use_new": "Use this device",
+    "keep_old": "Keep other device",
+    "kicked": "You were signed out because this account signed in on another device."
+  },
+  "pwa": {
+    "install_title": "Install ANU Production",
+    "install_body": "Add to your device for faster shop-floor access.",
+    "install_btn": "Install",
+    "dismiss": "Not now"
   },
   "dept_dash": {
     "planner_title": "Planner Dashboard",
@@ -360,9 +388,10 @@
     "download_template": "Download Excel template",
     "import_excel": "Import from Excel",
     "importing": "Importing...",
-    "import_hint": "Excel columns must match the template exactly. Rows with errors are rejected with row numbers.",
+    "import_hint": "Template columns (aliases OK). Sample values are format examples only — any same-format value is OK (e.g. Item Qty 5 / 20 / 50). Blank Print → U. Good rows import; bad rows listed.",
     "import_success": "Imported {{count}} plan row(s).",
-    "import_errors": "Import rejected — fix these rows:",
+    "import_partial": "Imported {{ok}} row(s). {{fail}} row(s) skipped with errors:",
+    "import_errors": "Import issues:",
     "import_row_error": "Row {{row}}: {{message}}",
     "import_missing_columns": "Missing required columns",
     "import_no_rows": "No data rows found in file.",

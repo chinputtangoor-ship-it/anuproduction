@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { KpiCard } from "@/components/dashboard/KpiCard";
+import { LinePeriodFilter } from "@/components/dashboard/LinePeriodFilter";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useDashboardBundle } from "@/hooks/useDashboardData";
+import {
+  filterByLineAndPeriod,
+  todayIso,
+  type CustomRange,
+  type PeriodKey,
+} from "@/lib/calculations/period";
 import { computeProductionKpis } from "@/lib/calculations/production-kpis";
-import { PRODUCTION_LINES } from "@/lib/constants/production";
-import { fetchDeptDashboardBundle } from "@/lib/data/dashboard";
 import { useI18n } from "@/lib/i18n/context";
 import {
   Bar,
@@ -23,35 +30,35 @@ import {
 export default function ProductionDashboardPage() {
   const { t } = useI18n();
   const { user, loading: authLoading } = useRequireAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [plans, setPlans] = useState<any[]>([]);
-  const [boxes, setBoxes] = useState<any[]>([]);
-  const [filterLine, setFilterLine] = useState("All");
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const bundle = await fetchDeptDashboardBundle();
-        setPlans(bundle.plans);
-        setBoxes(bundle.boxes);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Load failed");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [authLoading, user]);
+  const { data, error: swrError, isLoading } = useDashboardBundle();
+  const plans = data?.plans ?? [];
+  const boxes = data?.boxes ?? [];
+  const [line, setLine] = useState("All");
+  const [period, setPeriod] = useState<PeriodKey>("Today");
+  const [custom, setCustom] = useState<CustomRange>({
+    start: todayIso(),
+    end: todayIso(),
+    startTime: "07:00",
+    endTime: "19:00",
+  });
 
   const kpis = useMemo(() => {
-    const fPlans = filterLine === "All" ? plans : plans.filter((p) => p.line === filterLine);
-    const fBoxes = filterLine === "All" ? boxes : boxes.filter((b) => b.line === filterLine);
-    return computeProductionKpis(fPlans, fBoxes);
-  }, [plans, boxes, filterLine]);
+    const fPlans = filterByLineAndPeriod(plans as Record<string, unknown>[], {
+      line,
+      period,
+      timeKey: "updated_at",
+      custom: period === "Custom" ? custom : null,
+    });
+    const fBoxes = filterByLineAndPeriod(boxes as Record<string, unknown>[], {
+      line,
+      period,
+      timeKey: "recorded_at",
+      custom: period === "Custom" ? custom : null,
+    });
+    return computeProductionKpis(fPlans as never[], fBoxes as never[]);
+  }, [plans, boxes, line, period, custom]);
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <DashboardSkeleton />;
 
   const cardStyle = {
     background: "var(--color-anu-surface)",
@@ -73,39 +80,23 @@ export default function ProductionDashboardPage() {
 
   return (
     <DashboardShell title={t("dept_dash.production_title")} icon="factory">
-      <div className="mb-6">
-        <label className="flex flex-col gap-1 text-xs" style={{ color: "var(--color-anu-muted)" }}>
-          {t("analytics.filter_line")}
-          <select
-            value={filterLine}
-            onChange={(e) => setFilterLine(e.target.value)}
-            className="rounded-lg border px-3 py-2 text-sm outline-none w-40"
-            style={{
-              background: "var(--color-anu-elevated)",
-              borderColor: "var(--color-anu-border)",
-              color: "var(--color-anu-text)",
-            }}
-          >
-            <option value="All">{t("analytics.period_all")}</option>
-            {PRODUCTION_LINES.map((ln) => (
-              <option key={ln} value={ln}>
-                {ln}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <LinePeriodFilter
+        line={line}
+        period={period}
+        onLineChange={setLine}
+        onPeriodChange={setPeriod}
+        custom={custom}
+        onCustomChange={setCustom}
+      />
 
-      {loading && (
-        <p style={{ color: "var(--color-anu-muted)" }}>{t("common.loading")}</p>
-      )}
-      {error && (
+      {isLoading && !plans.length && <DashboardSkeleton />}
+      {swrError && (
         <p className="text-sm mb-4" style={{ color: "var(--color-anu-danger)" }}>
-          {error}
+          {swrError.message}
         </p>
       )}
 
-      {!loading && (
+      {(!isLoading || plans.length > 0) && (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-3 gap-4">
             <KpiCard
@@ -153,7 +144,7 @@ export default function ProductionDashboardPage() {
                     }}
                     labelStyle={{ color: "var(--color-anu-text)", fontWeight: 600 }}
                     itemStyle={{ color: "var(--color-anu-text)" }}
-                    formatter={(v: any) => [`${v}%`]}
+                    formatter={(v) => [`${v ?? 0}%`]}
                   />
                   <Bar dataKey="pct" name="Progress" radius={[4, 4, 0, 0]}>
                     {progressData.map((d) => (

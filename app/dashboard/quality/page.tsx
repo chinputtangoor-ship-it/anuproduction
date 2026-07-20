@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { LinePeriodFilter } from "@/components/dashboard/LinePeriodFilter";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { filterByLineAndPeriod, type PeriodKey } from "@/lib/calculations/period";
+import { useDashboardBundle } from "@/hooks/useDashboardData";
+import {
+  filterByLineAndPeriod,
+  todayIso,
+  type CustomRange,
+  type PeriodKey,
+} from "@/lib/calculations/period";
 import { computeQualityKpis } from "@/lib/calculations/quality-kpis";
-import { fetchDeptDashboardBundle } from "@/lib/data/dashboard";
 import { useI18n } from "@/lib/i18n/context";
 import {
   Bar,
@@ -28,40 +34,30 @@ const COLORS = ["#00d4aa", "#54a0ff", "#6366f1", "#ffa502", "#f97316", "#a855f7"
 export default function QualityDashboardPage() {
   const { t } = useI18n();
   const { user, loading: authLoading } = useRequireAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [plans, setPlans] = useState<any[]>([]);
-  const [boxes, setBoxes] = useState<any[]>([]);
+  const { data, error: swrError, isLoading } = useDashboardBundle();
+  const plans = data?.plans ?? [];
+  const boxes = data?.boxes ?? [];
   const [line, setLine] = useState("All");
   const [period, setPeriod] = useState<PeriodKey>("Today");
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const bundle = await fetchDeptDashboardBundle();
-        setPlans(bundle.plans);
-        setBoxes(bundle.boxes);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Load failed");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [authLoading, user]);
+  const [custom, setCustom] = useState<CustomRange>({
+    start: todayIso(),
+    end: todayIso(),
+    startTime: "07:00",
+    endTime: "19:00",
+  });
 
   const kpis = useMemo(() => {
-    const fBoxes = filterByLineAndPeriod(boxes, {
+    const fBoxes = filterByLineAndPeriod(boxes as Record<string, unknown>[], {
       line,
       period,
       timeKey: "recorded_at",
+      custom: period === "Custom" ? custom : null,
     });
     const fPlans = line === "All" ? plans : plans.filter((p) => p.line === line);
-    return computeQualityKpis(fBoxes, fPlans);
-  }, [boxes, plans, line, period]);
+    return computeQualityKpis(fBoxes as never[], fPlans as never[]);
+  }, [boxes, plans, line, period, custom]);
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <DashboardSkeleton />;
 
   const cardStyle = {
     background: "var(--color-anu-surface)",
@@ -75,18 +71,18 @@ export default function QualityDashboardPage() {
         period={period}
         onLineChange={setLine}
         onPeriodChange={setPeriod}
+        custom={custom}
+        onCustomChange={setCustom}
       />
 
-      {loading && (
-        <p style={{ color: "var(--color-anu-muted)" }}>{t("common.loading")}</p>
-      )}
-      {error && (
+      {isLoading && !boxes.length && <DashboardSkeleton />}
+      {swrError && (
         <p className="text-sm mb-4" style={{ color: "var(--color-anu-danger)" }}>
-          {error}
+          {swrError.message}
         </p>
       )}
 
-      {!loading && (
+      {(!isLoading || boxes.length > 0 || plans.length > 0) && (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <KpiCard

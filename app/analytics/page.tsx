@@ -4,10 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { computePostProductionKpis } from "@/lib/calculations/post-production-kpis";
+import {
+  filterByLineAndPeriod,
+  todayIso,
+  type CustomRange,
+  type PeriodKey,
+} from "@/lib/calculations/period";
 import { PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
+import { LinePeriodFilter } from "@/components/dashboard/LinePeriodFilter";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer,
@@ -77,15 +85,14 @@ export default function AnalyticsPage() {
   const { t }  = useI18n();
 
   const [activeTab, setActiveTab]     = useState(0);
-  const [filterLine, setFilterLine]   = useState("All");
-  const [filterPeriod, setFilterPeriod] = useState("Today");
-
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const [useCustom, setUseCustom]         = useState(false);
-  const [customStart, setCustomStart]     = useState(todayStr);
-  const [customEnd, setCustomEnd]         = useState(todayStr);
-  const [customStartTime, setCustomStartTime] = useState("07:00");
-  const [customEndTime, setCustomEndTime]     = useState("19:00");
+  const [filterLine, setFilterLine] = useState("All");
+  const [filterPeriod, setFilterPeriod] = useState<PeriodKey>("Today");
+  const [custom, setCustom] = useState<CustomRange>({
+    start: todayIso(),
+    end: todayIso(),
+    startTime: "07:00",
+    endTime: "19:00",
+  });
 
   const { user, loading: authLoading } = useRequireAuth();
   const [plans, setPlans]         = useState<any[]>([]);
@@ -120,40 +127,18 @@ export default function AnalyticsPage() {
     setLoading(false);
   }
 
-  function applyFilter<T extends Record<string, any>>(data: T[], lineKey: string, timeKey?: string): T[] {
-    let d = [...data];
-    if (filterLine !== "All") d = d.filter(r => r[lineKey] === filterLine);
-    if (timeKey) {
-      if (useCustom) {
-        const from = new Date(`${customStart}T${customStartTime}:00`);
-        const to   = new Date(`${customEnd}T${customEndTime}:00`);
-        d = d.filter(r => {
-          const t = new Date(r[timeKey]);
-          return t >= from && t <= to;
-        });
-      } else if (filterPeriod !== "All") {
-        const now = new Date();
-        const cutoff =
-          filterPeriod === "Today"        ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) :
-          filterPeriod === "Day shift (07-19)" ? (() => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7); return d; })() :
-          filterPeriod === "Night shift (19-07)" ? (() => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19); return d; })() :
-          filterPeriod === "Last 7 days"   ? new Date(now.getTime() - 7 * 86400000) :
-          new Date(now.getTime() - 30 * 86400000);
-
-        if (filterPeriod === "Day shift (07-19)") {
-          const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7);
-          const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19);
-          d = d.filter(r => { const t = new Date(r[timeKey]); return t >= start && t < end; });
-        } else if (filterPeriod === "Night shift (19-07)") {
-          const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19);
-          const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 7);
-          d = d.filter(r => { const t = new Date(r[timeKey]); return t >= start && t < end; });
-        } else {
-          d = d.filter(r => new Date(r[timeKey]) >= cutoff);
-        }
-      }
-    }
-    return d;
+  function applyFilter<T extends Record<string, unknown>>(
+    data: T[],
+    lineKey: string,
+    timeKey?: string,
+  ): T[] {
+    return filterByLineAndPeriod(data, {
+      line: filterLine,
+      lineKey,
+      timeKey,
+      period: filterPeriod,
+      custom: filterPeriod === "Custom" ? custom : null,
+    });
   }
 
   const fBoxes   = applyFilter(boxes,     "line", "recorded_at");
@@ -282,17 +267,6 @@ export default function AnalyticsPage() {
   ).map(([line, count]) => ({ line, count }));
 
   const cardStyle = { background: SURFACE, borderColor: BORDER };
-  const lineOptions = ["All", ...ALL_LINES];
-
-  // ── Period options with translated labels, value stays in English for filter logic ──
-  const PERIOD_OPTIONS = [
-    { value: "All",                      labelKey: "analytics.period_all" },
-    { value: "Today",                    labelKey: "analytics.period_today" },
-    { value: "Day shift (07-19)",        labelKey: "analytics.period_day_shift" },
-    { value: "Night shift (19-07)",      labelKey: "analytics.period_night_shift" },
-    { value: "Last 7 days",              labelKey: "analytics.period_7days" },
-    { value: "Last 30 days",             labelKey: "analytics.period_30days" },
-  ];
 
   const TABS = [
     t("analytics.tab_overview"),
@@ -300,13 +274,7 @@ export default function AnalyticsPage() {
     t("analytics.tab_detail"),
   ];
 
-  if (authLoading || !user) return null;
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--color-anu-void)" }}>
-      <p style={{ color: MUTED }}>{t("analytics.loading_data")}</p>
-    </div>
-  );
+  if (authLoading || !user || loading) return <DashboardSkeleton />;
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>
@@ -321,60 +289,27 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        {/* Filter Bar */}
-        <div className="rounded-xl border p-4 mb-6 flex flex-wrap gap-4 items-end"
-             style={{ background: SURFACE, borderColor: BORDER }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_line")}</span>
-            <select value={filterLine} onChange={e => setFilterLine(e.target.value)}
-              className="rounded-lg border px-3 py-1.5 text-sm outline-none"
-              style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }}>
-              {lineOptions.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
+        <div className="rounded-xl border p-4 mb-6" style={{ background: SURFACE, borderColor: BORDER }}>
+          <LinePeriodFilter
+            line={filterLine}
+            period={filterPeriod}
+            onLineChange={setFilterLine}
+            onPeriodChange={setFilterPeriod}
+            custom={custom}
+            onCustomChange={setCustom}
+          />
+          <div className="flex flex-wrap items-center gap-3 -mt-2">
+            <span className="text-xs" style={{ color: MUTED }}>
+              {t("analytics.box_status_list", { count: fBoxes.length.toLocaleString() })}
+            </span>
+            <button
+              onClick={loadAll}
+              className="ml-auto text-xs px-3 py-2 min-h-[44px] rounded-lg border transition hover:opacity-80"
+              style={{ borderColor: ACCENT, color: ACCENT }}
+            >
+              {t("analytics.refresh")}
+            </button>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_period")}</span>
-            <select
-              value={useCustom ? "custom" : filterPeriod}
-              onChange={e => {
-                if (e.target.value === "custom") { setUseCustom(true); }
-                else { setUseCustom(false); setFilterPeriod(e.target.value); }
-              }}
-              className="rounded-lg border px-3 py-1.5 text-sm outline-none"
-              style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }}>
-              {PERIOD_OPTIONS.map(p => <option key={p.value} value={p.value}>{t(p.labelKey)}</option>)}
-              <option value="custom">{t("analytics.filter_custom")}</option>
-            </select>
-          </div>
-
-          {useCustom && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_from")}</span>
-              <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-                className="rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
-              <input type="time" value={customStartTime} onChange={e => setCustomStartTime(e.target.value)}
-                className="rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
-              <span className="text-xs" style={{ color: MUTED }}>{t("analytics.filter_to")}</span>
-              <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-                className="rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
-              <input type="time" value={customEndTime} onChange={e => setCustomEndTime(e.target.value)}
-                className="rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ background: ELEVATED, borderColor: BORDER, color: TEXT }} />
-            </div>
-          )}
-
-          <span className="ml-auto text-xs" style={{ color: MUTED }}>
-            {t("analytics.box_status_list", { count: fBoxes.length.toLocaleString() })}
-          </span>
-          <button onClick={loadAll}
-            className="text-xs px-3 py-1.5 rounded-lg border transition hover:opacity-80"
-            style={{ borderColor: ACCENT, color: ACCENT }}>
-            {t("analytics.refresh")}
-          </button>
         </div>
 
         {/* Tabs */}

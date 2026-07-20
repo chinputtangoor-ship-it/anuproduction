@@ -6,6 +6,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { generateUsernameFromFullname, isValidUsername, sanitizeUsername } from "@/lib/auth/username";
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { DEPARTMENTS } from "@/lib/constants/departments";
 import { POSITIONS } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/types";
@@ -231,7 +232,7 @@ export default function AccountPage() {
   const fmtDate = (d: string | null) =>
     d ? new Date(d).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" }) : "-";
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <TableSkeleton />;
 
   return (
     <div className="w-full min-h-screen" style={{ background: "var(--color-anu-void)" }}>

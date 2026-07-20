@@ -26,6 +26,7 @@ export const ROUTE_SECTION: Record<string, string> = {
   "/analytics": "nav.post_production",
   "/boxes": "nav.post_production",
   "/user": "nav.user",
+  "/settings/features": "nav.user",
 };
 
 const APPROVE_ONLY_ROUTES = new Set(["/camera", "/repass"]);
@@ -51,7 +52,9 @@ export function canAccessRoute(
 ): boolean {
   if (pathname === "/login" || pathname === "/dashboard") return true;
 
-  if (pathname === "/user") return canManageUsers(role);
+  if (pathname === "/user" || pathname === "/settings/features") {
+    return canManageUsers(role);
+  }
 
   if (pathname === "/plan") return true;
 

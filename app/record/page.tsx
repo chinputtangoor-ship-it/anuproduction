@@ -12,6 +12,7 @@ import {
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
+import { FormSkeleton } from "@/components/ui/Skeleton";
 
 export default function RecordPage() {
   const { t } = useI18n();
@@ -98,7 +99,7 @@ export default function RecordPage() {
     setSaving(false);
   }
 
-  if (loading || !user) return null;
+  if (loading || !user) return <FormSkeleton />;
 
   return (
     <ProductionFlowShell

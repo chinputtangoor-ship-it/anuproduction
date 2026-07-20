@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 export default function PlanPage() {
   const router = useRouter();
@@ -139,14 +140,13 @@ export default function PlanPage() {
       return;
     }
 
-    if (result.errors.length > 0) {
-      setImportErrors(result.errors);
-      setImporting(false);
-      return;
-    }
-
     if (result.rows.length === 0) {
-      setImportMessage(t("plan.import_no_rows"));
+      setImportErrors(result.errors);
+      setImportMessage(
+        result.errors.length
+          ? t("plan.import_errors")
+          : t("plan.import_no_rows"),
+      );
       setImporting(false);
       return;
     }
@@ -162,7 +162,18 @@ export default function PlanPage() {
     }
 
     await loadPlans();
-    setImportMessage(t("plan.import_success", { count: String(result.rows.length) }));
+    if (result.errors.length > 0) {
+      setImportErrors(result.errors);
+      setImportMessage(
+        t("plan.import_partial", {
+          ok: String(result.rows.length),
+          fail: String(result.errors.length),
+        }),
+      );
+    } else {
+      setImportErrors([]);
+      setImportMessage(t("plan.import_success", { count: String(result.rows.length) }));
+    }
     setImporting(false);
     setTab("view");
   }
@@ -187,7 +198,7 @@ export default function PlanPage() {
     "Status", "Finish Date",
   ];
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) return <TableSkeleton />;
 
   if (editingPlan) {
     return (

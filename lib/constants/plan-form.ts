@@ -102,7 +102,8 @@ export function planFormToPayload(form: PlanFormValues, userId?: string) {
     fert_code: form.fert_code || null,
     semifinish_code: form.semifinish_code || null,
     item_qty_million: parseFloat(form.item_qty_million) || 0,
-    need_af_box: parseInt(form.need_af_box, 10) || 0,
+    // numeric — allow 0–2 decimal places (D11)
+    need_af_box: parseFloat(form.need_af_box) || 0,
     customer_name: form.customer_name || null,
     country: form.country || null,
     box_packing: form.box_packing || null,

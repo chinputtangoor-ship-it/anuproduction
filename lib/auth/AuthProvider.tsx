@@ -12,6 +12,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { canAccessRoute } from "@/lib/auth/roles";
 import { profileToSessionUser, PROFILE_SELECT } from "@/lib/auth/profile";
+import { clearLocalSession } from "@/lib/auth/device";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionUser } from "@/lib/auth/types";
 
@@ -20,6 +21,8 @@ type AuthContextValue = {
   loading: boolean;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  sessionMessage: string | null;
+  clearSessionMessage: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue>({
@@ -27,6 +30,8 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   logout: async () => {},
   refresh: async () => {},
+  sessionMessage: null,
+  clearSessionMessage: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionMessage, setSessionMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const {
@@ -62,6 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
+    try {
+      const msg = sessionStorage.getItem("anu_session_kicked");
+      if (msg) {
+        setSessionMessage(msg);
+        sessionStorage.removeItem("anu_session_kicked");
+      }
+    } catch {
+      /* ignore */
+    }
+
     refresh().finally(() => setLoading(false));
 
     const {
@@ -87,14 +103,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loading, pathname, router]);
 
   const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "release" }),
+      });
+    } catch {
+      /* ignore */
+    }
+    clearLocalSession();
     await supabase.auth.signOut();
     setUser(null);
     router.push("/login");
   }, [router, supabase]);
 
   const value = useMemo(
-    () => ({ user, loading, logout, refresh }),
-    [user, loading, logout, refresh],
+    () => ({
+      user,
+      loading,
+      logout,
+      refresh,
+      sessionMessage,
+      clearSessionMessage: () => setSessionMessage(null),
+    }),
+    [user, loading, logout, refresh, sessionMessage],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

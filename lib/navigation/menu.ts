@@ -86,6 +86,7 @@ export const APP_MENU: MenuSection[] = [
     icon: "userCog",
     items: [
       { labelKey: "dashboard.user_account", icon: "userCog", href: "/user", adminOnly: true },
+      { labelKey: "dashboard.features", icon: "sliders", href: "/settings/features", adminOnly: true },
     ],
   },
 ];

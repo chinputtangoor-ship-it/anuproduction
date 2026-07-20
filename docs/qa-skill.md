@@ -280,6 +280,17 @@ npx supabase migration list --linked
 2. Install / Add to Home Screen  
 3. ไอคอนแอปขึ้นถูกต้อง · เปิดจากไอคอนได้  
 
+### Script F: Phase 9 Platform (20 นาที)
+
+1. **Excel flexible:** import วันที่ `21.07.2026` / `3/8/2026` / `20-Jul-26` · header `Need AF` · Item Qty `0.1`/`1.2`/`10` · Need AF ทศนิยมได้ · Print ว่าง → U · Status ว่าง → Planing · แถวผิดรายงานชัด  
+2. **Partial import:** ไฟล์มีแถวถูก+แถวผิด → แถวถูกเข้า DB · แถวผิดไม่บล็อกทั้งไฟล์  
+3. **Single session:** login เครื่อง A แล้ว login เครื่อง B → ถาม Use new / Keep old · เลือก Use new → A ถูก logout · เลือก Keep old → B ไม่เข้า  
+4. **PWA banner:** เปิดเบราว์เซอร์ที่ยังไม่ติดตั้ง → เห็นแถบ ~20 วิ แล้วหาย · เปิดจากแอปติดตั้งแล้ว → ไม่เห็นแถบ  
+5. **Skeleton:** รีเฟรช dashboard / plan → เห็น skeleton ไม่จอขาว  
+6. **Date filter:** Planner / Production / Quality มี period + Custom เหมือน Analytics  
+7. **SWR + Realtime (flag on):** เปิด 2 จอ dashboard · บันทึกกล่องที่อีกจอ → จอแรกอัปเดตโดยไม่กด refresh (หรือหลัง mutate)  
+8. **Feature flags:** login admin → เห็น Features · เปิด/ปิดได้ · login manager/operator → ไม่เห็นเมนู · เรียก API โดยตรงต้อง 403  
+
 ---
 
 ## รายงาน QA (Template)
@@ -309,6 +320,7 @@ Tester: [ชื่อ / AI Agent]
 | C Excel | | |
 | D Batch 360 | | |
 | E PWA | | |
+| F Phase 9 Platform | | |
 
 ## Findings
 | ID | Sev | หัวข้อ | ขั้นตอนทำซ้ำ | สถานะ |
