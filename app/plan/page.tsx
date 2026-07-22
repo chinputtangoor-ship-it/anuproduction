@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlanFormFields } from "@/components/plan/PlanFormFields";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { canEditPlan } from "@/lib/auth/plan-access";
+import { useMenuAccess } from "@/lib/auth/AccessProvider";
 import {
   emptyPlanForm,
   planFormToPayload,
@@ -17,6 +17,7 @@ import {
   planFormsToPayloads,
   type PlanImportRowError,
 } from "@/lib/plan/excel";
+import { startBatchRunningById } from "@/lib/data/plan-batch";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
@@ -41,7 +42,7 @@ export default function PlanPage() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canEdit = user ? canEditPlan(user.role) : false;
+  const { canEdit } = useMenuAccess("plan");
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -92,7 +93,11 @@ export default function PlanPage() {
   }
 
   async function handleStartRunning(id: string) {
-    await supabase.from("production_plan").update({ batch_status: "Running" }).eq("id", id);
+    const { error } = await startBatchRunningById(id, user?.id);
+    if (error) {
+      alert(error);
+      return;
+    }
     await loadPlans();
   }
 

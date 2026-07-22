@@ -1,19 +1,14 @@
-import { canAccessMenuItem } from "@/lib/auth/roles";
-import { canManageUsers, canSeeAllDepartments } from "@/lib/auth/permissions";
+import { canManageUsers } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/types";
-import {
-  DEPARTMENT_SECTION_KEY,
-  type Department,
-} from "@/lib/constants/departments";
+import type { AccessLevel, MenuKey } from "@/lib/auth/menu-catalog";
+import { canReadAccess } from "@/lib/auth/access";
 import type { AppIconName } from "@/lib/icons/app-icons";
 
 export type MenuItem = {
   labelKey: string;
   icon: AppIconName;
   href: string;
-  /** Camera / Re-pass — supervisor+ only */
-  approveOnly?: boolean;
-  /** User admin — admin only */
+  menuKey: MenuKey;
   adminOnly?: boolean;
 };
 
@@ -23,47 +18,83 @@ export type MenuSection = {
   items: MenuItem[];
 };
 
-/** Cross-department links — plan is readable by all departments. */
-export const GLOBAL_MENU_ITEMS: MenuItem[] = [
-  { labelKey: "dashboard.plan", icon: "calendar", href: "/plan" },
-];
-
-/** Sidebar + dashboard navigation (visibility = department + position). */
+/**
+ * Sidebar catalog — D23: all department headers visible.
+ * Plan lives under Planner (not next to Home).
+ * Sub-items filtered by Phase 11 grants.
+ */
 export const APP_MENU: MenuSection[] = [
   {
     sectionKey: "nav.planner",
     icon: "calendar",
     items: [
-      { labelKey: "dashboard.planner_dash", icon: "chart", href: "/dashboard/planner" },
+      {
+        labelKey: "dashboard.planner_dash",
+        icon: "chart",
+        href: "/dashboard/planner",
+        menuKey: "ops_dashboard",
+      },
+      {
+        labelKey: "dashboard.plan",
+        icon: "calendar",
+        href: "/plan",
+        menuKey: "plan",
+      },
     ],
   },
   {
     sectionKey: "nav.quality",
     icon: "scan",
     items: [
-      { labelKey: "dashboard.quality_dash", icon: "chart", href: "/dashboard/quality" },
-      { labelKey: "dashboard.qc_form", icon: "scan", href: "/quality" },
-      { labelKey: "dashboard.box_grade", icon: "badgeCheck", href: "/quality/grade" },
+      { labelKey: "dashboard.qc_form", icon: "scan", href: "/quality", menuKey: "qc_form" },
+      {
+        labelKey: "dashboard.box_grade",
+        icon: "badgeCheck",
+        href: "/quality/grade",
+        menuKey: "box_grade",
+      },
     ],
   },
   {
     sectionKey: "nav.production",
     icon: "factory",
-    items: [
-      { labelKey: "dashboard.production_dash", icon: "chart", href: "/dashboard/production" },
-    ],
+    items: [],
   },
   {
     sectionKey: "nav.post_production",
     icon: "package",
     items: [
-      { labelKey: "dashboard.post_dash", icon: "chart", href: "/analytics" },
-      { labelKey: "dashboard.box_status", icon: "boxes", href: "/record" },
-      { labelKey: "dashboard.batch_detail", icon: "search", href: "/boxes" },
-      { labelKey: "dashboard.rejection", icon: "ban", href: "/rejection" },
-      { labelKey: "dashboard.backlog", icon: "clock", href: "/backlog" },
-      { labelKey: "dashboard.camera", icon: "camera", href: "/camera", approveOnly: true },
-      { labelKey: "dashboard.repass", icon: "refresh", href: "/repass", approveOnly: true },
+      {
+        labelKey: "dashboard.box_status",
+        icon: "boxes",
+        href: "/record",
+        menuKey: "box_status",
+      },
+      {
+        labelKey: "dashboard.batch_detail",
+        icon: "search",
+        href: "/boxes",
+        menuKey: "batch_detail",
+      },
+      {
+        labelKey: "dashboard.rejection",
+        icon: "ban",
+        href: "/rejection",
+        menuKey: "rejection",
+      },
+      { labelKey: "dashboard.backlog", icon: "clock", href: "/backlog", menuKey: "backlog" },
+      {
+        labelKey: "dashboard.camera",
+        icon: "camera",
+        href: "/camera",
+        menuKey: "camera",
+      },
+      {
+        labelKey: "dashboard.repass",
+        icon: "refresh",
+        href: "/repass",
+        menuKey: "repass",
+      },
     ],
   },
   {
@@ -85,31 +116,50 @@ export const APP_MENU: MenuSection[] = [
     sectionKey: "nav.user",
     icon: "userCog",
     items: [
-      { labelKey: "dashboard.user_account", icon: "userCog", href: "/user", adminOnly: true },
-      { labelKey: "dashboard.features", icon: "sliders", href: "/settings/features", adminOnly: true },
+      {
+        labelKey: "dashboard.user_account",
+        icon: "userCog",
+        href: "/user",
+        menuKey: "users",
+        adminOnly: true,
+      },
+      {
+        labelKey: "dashboard.features",
+        icon: "sliders",
+        href: "/settings/features",
+        menuKey: "features",
+        adminOnly: true,
+      },
+      {
+        labelKey: "dashboard.access_control",
+        icon: "sliders",
+        href: "/user/access",
+        menuKey: "access_control",
+        adminOnly: true,
+      },
     ],
   },
 ];
 
-export function getVisibleSections(
-  role: UserRole,
-  department?: Department | null,
-): MenuSection[] {
+/** @deprecated Plan moved under Planner — empty for Home strip. */
+export const GLOBAL_MENU_ITEMS: MenuItem[] = [];
+
+/** D23: everyone sees all department sections; User = admin only. */
+export function getVisibleSections(role: UserRole): MenuSection[] {
   const withoutUser = APP_MENU.filter((s) => s.sectionKey !== "nav.user");
   const userSection = APP_MENU.find((s) => s.sectionKey === "nav.user");
-
-  if (canSeeAllDepartments(role)) {
-    const sections = [...withoutUser];
-    if (userSection && canManageUsers(role)) sections.push(userSection);
-    return sections;
+  if (canManageUsers(role) && userSection) {
+    return [...withoutUser, userSection];
   }
-
-  if (!department) return [];
-
-  const ownSection = DEPARTMENT_SECTION_KEY[department];
-  return withoutUser.filter((s) => s.sectionKey === ownSection);
+  return withoutUser;
 }
 
-export function getVisibleMenuItems(section: MenuSection, role: UserRole): MenuItem[] {
-  return section.items.filter((item) => canAccessMenuItem(item, role));
+export function getVisibleMenuItems(
+  section: MenuSection,
+  getAccess: (menuKey: MenuKey) => AccessLevel,
+): MenuItem[] {
+  return section.items.filter((item) => {
+    if (item.adminOnly && !canReadAccess(getAccess(item.menuKey))) return false;
+    return canReadAccess(getAccess(item.menuKey));
+  });
 }

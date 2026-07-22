@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { usernameToAuthEmail } from "@/lib/auth/email";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hardenApiRequest } from "@/lib/security/harden-route";
 
 type BootstrapBody = {
   token?: string;
@@ -11,6 +12,12 @@ type BootstrapBody = {
 };
 
 export async function POST(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "bootstrap",
+    methods: ["POST"],
+  });
+  if (blocked) return blocked;
+
   const body = (await request.json()) as BootstrapBody;
   const expectedToken = process.env.ANU_BOOTSTRAP_TOKEN;
 

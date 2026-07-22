@@ -7,6 +7,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { SessionGuard } from "@/components/auth/SessionGuard";
 import { Sidebar } from "@/components/Sidebar";
+import { AccessProvider } from "@/lib/auth/AccessProvider";
 import { AuthProvider, useAuth } from "@/lib/auth/AuthProvider";
 import { FeatureFlagsProvider } from "@/lib/features/FeatureFlagsProvider";
 import { I18nProvider } from "@/lib/i18n/context";
@@ -25,12 +26,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 errorRetryCount: 2,
               }}
             >
-              <SessionGuard>
-                <PwaRegister />
-                <InstallBanner />
-                <GlobalHeader />
-                <AppBody>{children}</AppBody>
-              </SessionGuard>
+              <AccessProvider>
+                <SessionGuard>
+                  <PwaRegister />
+                  <InstallBanner />
+                  <GlobalHeader />
+                  <AppBody>{children}</AppBody>
+                </SessionGuard>
+              </AccessProvider>
             </SWRConfig>
           </FeatureFlagsProvider>
         </AuthProvider>

@@ -37,6 +37,7 @@ export default function RepassPage() {
   const [resultStatus, setResultStatus] = useState("AF");
   const [newDefects, setNewDefects]     = useState<string[]>([]);
   const [reason, setReason]             = useState("");
+  const [rejectionKg, setRejectionKg]   = useState("");
 
   const now = new Date();
   const roundedMin = Math.floor(now.getMinutes() / 15) * 15;
@@ -122,6 +123,7 @@ export default function RepassPage() {
     setNewDefects([]);
     setReason("");
     setEndTime("");
+    setRejectionKg("");
   }
 
   async function handleSave() {
@@ -138,7 +140,7 @@ export default function RepassPage() {
     if (!user?.id) return;
 
     setSaving(true);
-    await supabase.from("repass").insert([
+    const { error: repassErr } = await supabase.from("repass").insert([
       withRecordedBy(
         {
           line, batch,
@@ -156,11 +158,47 @@ export default function RepassPage() {
       ),
     ]);
 
+    if (repassErr) {
+      alert(repassErr.message);
+      setSaving(false);
+      return;
+    }
+
     if (!isOther) {
-      await supabase.from("boxes").update({
+      const { error: boxErr } = await supabase.from("boxes").update({
         status:  resultStatus,
         defects: needDefect ? newDefects.join(",") : selBox?.defects,
       }).eq("batch", batch).eq("box_number", boxNum);
+      if (boxErr) {
+        alert(boxErr.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Phase 10B: optional rejection kg → Material Balance (D18 / D22)
+    const rejVal = parseFloat(rejectionKg) || 0;
+    let rejNote = "";
+    if (rejVal > 0) {
+      const { error: rejErr } = await supabase.from("rejection").insert([
+        withRecordedBy(
+          {
+            line,
+            batch,
+            ats_kg: rejVal,
+            print_kg: 0,
+            cam_kg: 0,
+            check_by: user.id,
+          },
+          user.id,
+        ),
+      ]);
+      if (rejErr) {
+        alert(rejErr.message);
+        setSaving(false);
+        return;
+      }
+      rejNote = `\n${t("repass.rejection_kg_saved", { kg: rejVal.toFixed(3) })}`;
     }
 
     setSaving(false);
@@ -169,11 +207,12 @@ export default function RepassPage() {
     if (isOther) {
       setOtherBatch("");
       setOtherBoxNum("");
-      alert(t("repass.alert_success"));
+      alert(t("repass.alert_success") + rejNote);
     } else {
       await loadNonAfBoxes(batch);
       setStep("box");
       setSelBox(null);
+      if (rejNote) alert(t("repass.alert_success") + rejNote);
     }
   }
 
@@ -595,6 +634,35 @@ export default function RepassPage() {
                   />
                 </div>
               )}
+
+              <div className="rounded-xl border p-4" style={cardStyle}>
+                <p className="text-xs mb-1 uppercase tracking-wider font-medium" style={{ color: "var(--color-anu-muted)" }}>
+                  {t("repass.rejection_kg_title")}
+                </p>
+                <p className="text-xs mb-3" style={{ color: "var(--color-anu-muted)" }}>
+                  {t("repass.rejection_kg_sub")}
+                </p>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium whitespace-nowrap" style={{ color: "var(--color-anu-text)" }}>
+                    {t("repass.rejection_kg")}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={rejectionKg}
+                    placeholder="0.000"
+                    onChange={(e) => setRejectionKg(e.target.value)}
+                    className="flex-1 rounded-lg border px-3 py-2.5 text-lg font-bold outline-none text-right min-h-[44px]"
+                    style={{
+                      background: "var(--color-anu-elevated)",
+                      borderColor: "var(--color-anu-border)",
+                      color: "var(--color-anu-text)",
+                    }}
+                  />
+                  <span className="text-sm" style={{ color: "var(--color-anu-muted)" }}>kg</span>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-3 mt-auto">
                 <button onClick={handleSave} disabled={saving}

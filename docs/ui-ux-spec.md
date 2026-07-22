@@ -73,7 +73,7 @@ App Shell
 ├── Global header (โลโก้ · ภาษา · user)
 ├── Sidebar ตามแผนก + role
 └── Pages
-    ├── Dashboards ตามแผนก (Phase 5)
+    ├── Dashboards ตามแผนก (Phase 10A — ชุดเดียวกัน)
     ├── Planner → Plan (+ Excel import)
     ├── Quality → QC Form (freeze) · Box Grade (ใหม่)
     ├── Production → (เมนูตามที่มี/ขยายทีหลัง)
@@ -106,22 +106,31 @@ Dropdown **เพิ่มคู่กับ role** (ไม่แทนที่
 - แผน (`/plan`): **ทุกแผนกเข้าดูได้** แต่ฟอร์มเป็น read-only ถ้าไม่ใช่ Planner (และไม่ใช่ admin/supervisor ตาม config)  
 - ป้าย “ดูอย่างเดียว” ชัดเจนเมื่อ read-only  
 
-### Dashboards (Phase 5)
+### Sidebar & access (Phase 11 — D23–D26)
 
-| แผนก | จุดโฟกัส UI |
-|------|-------------|
-| Planner | สถานะแผน · batch ที่ใกล้ due · import สำเร็จล่าสุด |
-| Quality | คิว grading · สัดส่วน grade · defect ยอดนิยม |
-| Production | KPI จากข้อมูลที่มีอยู่ (เช่น batch Running/Finished ต่อ line) — **ไม่บังคับหน้ากรอกใหม่ก่อน** |
-| Post Production | ยกระดับจาก Analytics ปัจจุบัน — throughput, weight completion, rejection **by line** |
-| Warehouse / HR / Account | **ยังไม่ออกแบบหน้า** |
+- **หัวแผนก:** ทุกคนเห็นครบ (Planner … Account) · กลุ่ม **User** เฉพาะ admin  
+- **เมนูย่อย:** โผล่ตาม grant (`read` / `edit`) ที่ admin ตั้ง — รายบุคคล · ตำแหน่งในแผนก · ตำแหน่งทั้งหมด  
+- รายละเอียด: [phase-11-configurable-access.md](./phase-11-configurable-access.md)  
+- Phase 11 implemented: sidebar ทุกแผนก · grant · `/user/access` · **Plan + Ops Dashboard อยู่ใต้ Planner**
 
-มาตรฐานกราฟ Post Production:
+### Dashboards (D24)
+
+| รายการ | Route | หมายเหตุ |
+|--------|-------|----------|
+| **Ops Dashboard** | `/dashboard/planner` | อยู่เมนู **Planner** อย่างเดียว · มอบสิทธิ์ให้แผนกอื่นผ่าน Access control |
+| Quality / Production / Post dash (เก่า) | redirect → `/dashboard/planner` | ไม่มีเมนูแยกแล้ว |
+| Warehouse / HR / Account | — | **ยังไม่ออกแบบหน้า** |
+
+**OpsDashboard:** Online/Offline 13 ไลน์ · progress % · KPI strip · Box status by line · Material Balance · Camera · Batch status · Due 7 days · Top defects · Line summary · Backlog · Re-pass · Awaiting Re-pass
+
+มาตรฐานกราฟ:
 
 - ชื่อแกน / หน่วยชัด  
-- กรองตามช่วงวันที่ + line  
+- กรองตามช่วงวันที่ + line (`LinePeriodFilter`)  
 - ไม่ใช้ Pareto scrap/defect แบบเดิม (ถูกแทนใน Phase 4)  
 - ว่างเปล่า = empty state ข้อความสั้น ไม่ใช่กราฟพัง  
+- ไม่มี emoji ใน UI — ใช้ lucide / สีสถานะ  
+- รายละเอียดสูตร: [phase-10a-unified-ops-dashboard.md](./phase-10a-unified-ops-dashboard.md)
 
 ---
 
@@ -132,8 +141,8 @@ Dropdown **เพิ่มคู่กับ role** (ไม่แทนที่
 ลำดับฟิลด์ (ต่อ **หนึ่งกล่อง**):
 
 1. Line (dropdown จาก `PRODUCTION_LINES`)  
-2. Batch (ของ line ที่เลือก)  
-3. Box (เฉพาะกล่องที่ยังไม่ graded)  
+2. Batch (**Planing หรือ Running** ของ line ที่เลือก — Phase 10B)  
+3. Box (เลขกล่องถัดไป · เกรดกล่องที่ 1 บน Planing จะ Start batch อัตโนมัติ)  
 4. Grade (`BOX_STATUS`)  
 5. Defect — แสดงเมื่อ grade **ไม่อยู่ใน** `STATUSES_WITHOUT_DEFECT` = **AF, HP, HUP** · รายการจาก [defect-list.md](./defect-list.md)  
 6. ปุ่มบันทึกขนาดใหญ่  
@@ -245,7 +254,7 @@ Box no. · Box Status · Defects · Net (kg) · Total (kg) · Weight by · Check
 
 ### Dashboard date filter (ร่วม)
 
-Planner · Quality · Production · Post Production (`/analytics`) ใช้ตัวกรองเดียวกัน:
+Planner · Quality · Production · Post Production (`/dashboard/post-production`) ใช้ตัวกรองเดียวกัน:
 
 - Line  
 - Period: All / Today / Day shift / Night shift / Last 7 / Last 30 / **Custom**  

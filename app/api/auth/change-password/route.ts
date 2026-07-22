@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSessionProfile } from "@/lib/supabase/server";
+import { hardenApiRequest } from "@/lib/security/harden-route";
 
 export async function POST(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "auth",
+    methods: ["POST"],
+  });
+  if (blocked) return blocked;
+
   const { supabase, profile } = await getSessionProfile();
 
   if (!profile) {

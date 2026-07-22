@@ -1,11 +1,35 @@
 import { NextResponse } from "next/server";
 import { createClient, getSessionProfile } from "@/lib/supabase/server";
+import { hardenApiRequest } from "@/lib/security/harden-route";
+import {
+  AUTH_SESSION_IDEMPOTENCY_SCOPE,
+  getIdempotentResponse,
+  readIdempotencyKey,
+  storeIdempotentResponse,
+} from "@/lib/security/idempotency";
 
 type Body = {
   action?: "check" | "claim" | "release";
   deviceId?: string;
   deviceLabel?: string;
 };
+
+async function jsonResult(
+  body: unknown,
+  status: number,
+  idempotency?: { userId: string; key: string } | null,
+) {
+  if (idempotency) {
+    await storeIdempotentResponse({
+      scope: AUTH_SESSION_IDEMPOTENCY_SCOPE,
+      userId: idempotency.userId,
+      key: idempotency.key,
+      status,
+      body,
+    });
+  }
+  return NextResponse.json(body, { status });
+}
 
 /**
  * Single-session handshake.
@@ -14,10 +38,30 @@ type Body = {
  * - release: clear session on logout
  */
 export async function POST(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "auth",
+    methods: ["POST"],
+  });
+  if (blocked) return blocked;
+
   const { profile } = await getSessionProfile();
   if (!profile || !profile.is_active) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const idemKey = readIdempotencyKey(request);
+  if (idemKey) {
+    const cached = await getIdempotentResponse({
+      scope: AUTH_SESSION_IDEMPOTENCY_SCOPE,
+      userId: profile.id,
+      key: idemKey,
+    });
+    if (cached) {
+      return NextResponse.json(cached.body, { status: cached.status });
+    }
+  }
+
+  const idempotency = idemKey ? { userId: profile.id, key: idemKey } : null;
 
   const body = (await request.json()) as Body;
   const action = body.action ?? "check";
@@ -25,7 +69,7 @@ export async function POST(request: Request) {
   const deviceLabel = String(body.deviceLabel ?? "Browser").slice(0, 80);
 
   if ((action === "check" || action === "claim") && !deviceId) {
-    return NextResponse.json({ error: "deviceId required" }, { status: 400 });
+    return jsonResult({ error: "deviceId required" }, 400, idempotency);
   }
 
   const supabase = await createClient();
@@ -37,7 +81,11 @@ export async function POST(request: Request) {
     .single();
 
   if (error || !row) {
-    return NextResponse.json({ error: error?.message ?? "Profile not found" }, { status: 400 });
+    return jsonResult(
+      { error: error?.message ?? "Profile not found" },
+      400,
+      idempotency,
+    );
   }
 
   const activeId = row.active_session_id as string | null;
@@ -52,37 +100,43 @@ export async function POST(request: Request) {
         session_updated_at: new Date().toISOString(),
       })
       .eq("id", profile.id);
-    return NextResponse.json({ ok: true });
+    return jsonResult({ ok: true }, 200, idempotency);
   }
 
   if (action === "check") {
     if (!activeId || activeId === deviceId) {
-      // No conflict — claim quietly if empty or same device
       const { data: claimed } = await supabase
         .from("profiles")
         .update({
           active_session_id: deviceId,
           active_device_label: deviceLabel,
           session_updated_at: new Date().toISOString(),
-          // keep version if same device; bump only on first claim from empty
           active_session_version: activeId ? version : version + 1,
         })
         .eq("id", profile.id)
         .select("active_session_id, active_session_version")
         .single();
 
-      return NextResponse.json({
-        status: "ok",
-        sessionId: claimed?.active_session_id ?? deviceId,
-        version: claimed?.active_session_version ?? version + 1,
-      });
+      return jsonResult(
+        {
+          status: "ok",
+          sessionId: claimed?.active_session_id ?? deviceId,
+          version: claimed?.active_session_version ?? version + 1,
+        },
+        200,
+        idempotency,
+      );
     }
 
-    return NextResponse.json({
-      status: "conflict",
-      otherDeviceLabel: row.active_device_label ?? "Other device",
-      version,
-    });
+    return jsonResult(
+      {
+        status: "conflict",
+        otherDeviceLabel: row.active_device_label ?? "Other device",
+        version,
+      },
+      200,
+      idempotency,
+    );
   }
 
   if (action === "claim") {
@@ -100,20 +154,31 @@ export async function POST(request: Request) {
       .single();
 
     if (claimError) {
-      return NextResponse.json({ error: claimError.message }, { status: 400 });
+      return jsonResult({ error: claimError.message }, 400, idempotency);
     }
 
-    return NextResponse.json({
-      status: "ok",
-      sessionId: claimed?.active_session_id ?? deviceId,
-      version: claimed?.active_session_version ?? nextVersion,
-    });
+    return jsonResult(
+      {
+        status: "ok",
+        sessionId: claimed?.active_session_id ?? deviceId,
+        version: claimed?.active_session_version ?? nextVersion,
+      },
+      200,
+      idempotency,
+    );
   }
 
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  return jsonResult({ error: "Unknown action" }, 400, idempotency);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "auth",
+    methods: ["GET"],
+    requireJson: false,
+  });
+  if (blocked) return blocked;
+
   const { profile } = await getSessionProfile();
   if (!profile || !profile.is_active) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

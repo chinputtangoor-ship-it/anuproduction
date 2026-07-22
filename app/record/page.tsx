@@ -9,6 +9,7 @@ import {
   fetchProfileNames,
   type GradedBox,
 } from "@/lib/data/boxes";
+import { useMenuAccess } from "@/lib/auth/AccessProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
@@ -17,6 +18,7 @@ import { FormSkeleton } from "@/components/ui/Skeleton";
 export default function RecordPage() {
   const { t } = useI18n();
   const { user, loading } = useRequireAuth();
+  const { canEdit } = useMenuAccess("box_status");
 
   const [pending, setPending] = useState<GradedBox[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
@@ -57,6 +59,10 @@ export default function RecordPage() {
   );
 
   async function handleSave(batch: string) {
+    if (!canEdit) {
+      alert(t("access.read_only"));
+      return;
+    }
     if (!selected) {
       alert(t("record.alert_no_box"));
       return;
@@ -269,7 +275,7 @@ export default function RecordPage() {
               <button
                 type="button"
                 onClick={() => handleSave(batch)}
-                disabled={saving}
+                disabled={saving || !canEdit}
                 className="py-4 rounded-xl text-base font-bold transition hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 style={{ background: "var(--color-anu-accent)", color: "#fff" }}
               >

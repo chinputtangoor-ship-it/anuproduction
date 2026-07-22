@@ -10,7 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { canAccessRoute } from "@/lib/auth/roles";
 import { profileToSessionUser, PROFILE_SELECT } from "@/lib/auth/profile";
 import { clearLocalSession } from "@/lib/auth/device";
 import { createClient } from "@/lib/supabase/client";
@@ -94,19 +93,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!user) {
       router.replace("/login");
-      return;
     }
-
-    if (!canAccessRoute(user.role, pathname, user.department)) {
-      router.replace("/dashboard");
-    }
+    // Menu/route ACL is enforced by AccessProvider (Phase 11).
   }, [user, loading, pathname, router]);
 
   const logout = useCallback(async () => {
     try {
       await fetch("/api/auth/session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key":
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `release-${Date.now()}`,
+        },
         body: JSON.stringify({ action: "release" }),
       });
     } catch {

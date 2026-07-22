@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { usernameToAuthEmail } from "@/lib/auth/email";
 import { isValidUsername, sanitizeUsername } from "@/lib/auth/username";
 import type { UserRole } from "@/lib/auth/types";
-import { POSITIONS, isValidPosition } from "@/lib/auth/permissions";
+import { isValidPosition } from "@/lib/auth/permissions";
 import { DEPARTMENTS, isDepartment } from "@/lib/constants/departments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
+import { hardenApiRequest } from "@/lib/security/harden-route";
 
 function adminConfigError(error: unknown) {
   const message = error instanceof Error ? error.message : "Server configuration error";
@@ -30,7 +31,14 @@ async function requireAdmin() {
   return profile;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["GET"],
+    requireJson: false,
+  });
+  if (blocked) return blocked;
+
   const adminProfile = await requireAdmin();
   if (!adminProfile) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -56,6 +64,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["POST"],
+  });
+  if (blocked) return blocked;
+
   const adminProfile = await requireAdmin();
   if (!adminProfile) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

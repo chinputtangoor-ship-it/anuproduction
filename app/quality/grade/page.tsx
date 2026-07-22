@@ -11,6 +11,8 @@ import {
   statusNeedsDefect,
 } from "@/lib/constants/production";
 import { fetchNextBoxNumber } from "@/lib/data/boxes";
+import { startBatchFromFirstGrade } from "@/lib/data/plan-batch";
+import { useMenuAccess } from "@/lib/auth/AccessProvider";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
@@ -19,6 +21,7 @@ import { FormSkeleton } from "@/components/ui/Skeleton";
 export default function BoxGradePage() {
   const { t } = useI18n();
   const { user, loading } = useRequireAuth();
+  const { canEdit } = useMenuAccess("box_grade");
 
   const [nextBox, setNextBox] = useState(1);
   const [status, setStatus] = useState("AF");
@@ -45,6 +48,10 @@ export default function BoxGradePage() {
   );
 
   async function handleSave(line: string, batch: string) {
+    if (!canEdit) {
+      alert(t("access.read_only"));
+      return;
+    }
     if (needDefect && defects.length === 0) {
       alert(t("grade.alert_no_defect"));
       return;
@@ -54,13 +61,14 @@ export default function BoxGradePage() {
       return;
     }
 
+    const boxNumber = nextBox;
     setSaving(true);
     const { error } = await supabase.from("boxes").insert([
       withRecordedBy(
         {
           line,
           batch,
-          box_number: nextBox,
+          box_number: boxNumber,
           status,
           defects: needDefect ? defects.join(",") : null,
           net_weight_kg: null,
@@ -78,7 +86,19 @@ export default function BoxGradePage() {
       return;
     }
 
-    setLastSaved(t("grade.saved_msg", { box: nextBox, status }));
+    // Phase 10B: first graded box starts a Planing batch → Running
+    let startedNote = "";
+    if (boxNumber === 1) {
+      const { started, error: startErr } = await startBatchFromFirstGrade(line, batch);
+      if (startErr) {
+        // Box already saved — surface warning but do not roll back grade
+        alert(t("grade.start_batch_warn", { error: startErr }));
+      } else if (started) {
+        startedNote = ` · ${t("grade.batch_started")}`;
+      }
+    }
+
+    setLastSaved(t("grade.saved_msg", { box: boxNumber, status }) + startedNote);
     setNextBox((n) => n + 1);
     setStatus("AF");
     setDefects([]);
@@ -94,6 +114,8 @@ export default function BoxGradePage() {
       noBatchKey="grade.no_batch"
       lineCols={6}
       batchCols={4}
+      batchStatuses={["Planing", "Running"]}
+      showBatchStatus
       onBatchReady={handleBatchReady}
     >
       {({ line, batch }) => (
@@ -108,6 +130,11 @@ export default function BoxGradePage() {
             <p className="text-xs mt-2" style={{ color: "var(--color-anu-muted)" }}>
               {line} › {batch}
             </p>
+            {nextBox === 1 && (
+              <p className="text-xs mt-2" style={{ color: "var(--color-anu-warning)" }}>
+                {t("grade.first_box_starts")}
+              </p>
+            )}
           </div>
 
           <div className="rounded-xl border p-4" style={cardStyle}>
@@ -187,10 +214,16 @@ export default function BoxGradePage() {
             </p>
           )}
 
+          {!canEdit && (
+            <p className="text-sm text-center" style={{ color: "var(--color-anu-warning)" }}>
+              {t("access.read_only")}
+            </p>
+          )}
+
           <button
             type="button"
             onClick={() => handleSave(line, batch)}
-            disabled={saving}
+            disabled={saving || !canEdit}
             className="py-4 rounded-xl text-base font-bold transition hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
             style={{ background: "var(--color-anu-accent)", color: "#fff" }}
           >

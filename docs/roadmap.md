@@ -1,6 +1,6 @@
 # ANU Production — Roadmap
 
-> Version: 1.2 · อ้างอิง owner brief + [decisions.md](./decisions.md) (2026-07-20)  
+> Version: 1.5 · อ้างอิง owner brief + [decisions.md](./decisions.md) (2026-07-22)  
 > เป้าหมาย: flow โรงงานมาตรฐาน · แยกแผนก · audit ได้ · PWA · platform hardening  
 > Cursor rule: `.cursor/rules/anu-production.mdc` · UX: [ui-ux-spec.md](./ui-ux-spec.md) · QA: [qa-skill.md](./qa-skill.md)
 
@@ -18,6 +18,10 @@
 | 5 | Department Dashboards | ✅ Done | Planner/Quality/Production/Post Production |
 | 6 | PWA & App identity | ✅ Done | manifest · icons · install · offline shell |
 | 9 | Platform Hardening | ✅ Done | Excel flexible · single session · PWA banner · skeleton · date filters · SWR · Realtime · feature flags |
+| 10A | Unified Ops Dashboard | ✅ Done | Ops widgets · เมนูอยู่ Planner (D24) · [phase-10a](./phase-10a-unified-ops-dashboard.md) |
+| 10B | Batch start + Grade + Re-pass kg | ✅ Done | start 2 ทาง · Box Grade Planing+Running · Re-pass rejection kg · [phase-10b](./phase-10b-batch-start-grade-repass.md) |
+| 11 | Configurable Access | ✅ Done | Sidebar ทุกแผนก · grant read/edit · `/user/access` · Plan ใน Planner · [phase-11](./phase-11-configurable-access.md) |
+| 12 | API & PWA Security Hardening | ✅ Done (12.1–12.5) | Rate limit (Supabase) · body/firewall · CSP Report-Only · SW TTL/allowlist · session idempotency · [phase-12](./phase-12-api-pwa-security.md) · 12.6 CSP enforce ทีหลัง |
 | 7 | Warehouse / HR / Account | ⏸️ พัก | Dashboard ยังไม่ทำ |
 | 8 | Deep Odoo accounting bridge | ⏸️ หลังบ้านบัญชีเต็ม | หลัง flow หลักนิ่ง |
 
@@ -261,8 +265,70 @@ Phase 1 Foundations
   → Phase 5 Dept dashboards
   → Phase 6 PWA
   → Phase 9 Platform Hardening
+  → Phase 10A Unified Ops Dashboard
+  → Phase 10B Batch start / Box Grade / Re-pass kg
+  → Phase 11 Configurable Access
+  → Phase 12 API & PWA Security Hardening
   → (พัก) 7–8
 ```
+
+---
+
+## Phase 10A — Unified Ops Dashboard ✅
+
+**เป้าหมาย:** Ops Dashboard ชุด widgets เดียว (เดิมทำ 4 route · ตอนนี้เมนูอยู่ Planner ต่อ D24)
+
+ดูรายละเอียด · สูตร · exit criteria ใน [phase-10a-unified-ops-dashboard.md](./phase-10a-unified-ops-dashboard.md)
+
+**มติที่เกี่ยวข้อง:** D17 · D18 · D19 · D24
+
+**ส่งมอบหลัก:** `OpsDashboard` · Material Balance · Scrap Rate = Scrap-only · เมนูที่ `/dashboard/planner`
+
+---
+
+## Phase 10B — Batch start + Box Grade + Re-pass kg ✅
+
+| งาน | รายละเอียด |
+|-----|------------|
+| Start batch 2 ทาง | (1) ปุ่ม Start ในแผน (2) QC grade กล่องที่ 1 → batch เป็น Running |
+| Box Grade batches | เลือกได้ทั้ง Planing และ Running |
+| Re-pass rejection kg | เพิ่มช่องน้ำหนัก rejection ตอน Re-pass เพื่อ Material Balance |
+
+ดู [phase-10b-batch-start-grade-repass.md](./phase-10b-batch-start-grade-repass.md) · มติ D20–D22
+
+**Deploy note:** รัน `20260722120000_phase10b_start_batch_rpc.sql` ก่อนใช้ auto-start จาก Box Grade
+
+---
+
+## Phase 11 — Configurable Access ✅
+
+**เป้าหมาย:** Sidebar เห็นทุกแผนก · เมนูย่อยตาม grant (read/edit) · admin ตั้งได้รายบุคคล / ตำแหน่งในแผนก / ตำแหน่งทั้งหมด
+
+ดู [phase-11-configurable-access.md](./phase-11-configurable-access.md) · มติ D23–D27
+
+**ส่งมอบ:** `access_menu_grant` · AccessProvider · `/user/access` · Plan ใต้ Planner · Ops Dashboard ใต้ Planner
+
+**Deploy note:** รัน `supabase/migrations/20260722130000_phase11_access_grants.sql`
+
+---
+
+## Phase 12 — API & PWA Security Hardening ✅ (12.1–12.5)
+
+**เป้าหมาย:** กันยิง API / ยัด body / ฝัง iframe / cache ของเก่า — ไม่เปลี่ยน flow ผลิต
+
+| งาน | รายละเอียด |
+|-----|------------|
+| Rate limit | ตาราง Supabase + RPC (D30) บน auth · admin · bootstrap (D31) |
+| Body + firewall | จำกัดขนาด · method · content-type |
+| Headers | CSP **Report-Only** ก่อน (D32) + frame/nosniff/referrer ฯลฯ |
+| SW | allowlist + TTL — ห้าม cache `/api/*` |
+| Idempotency | เฉพาะ `/api/auth/session` (D33) |
+
+ดู [phase-12-api-pwa-security.md](./phase-12-api-pwa-security.md) · มติ D29–D33
+
+**Deploy note:** รัน `20260722044327_phase12_api_pwa_security.sql` ก่อนพึ่ง rate limit / idempotency
+
+**ค้างรอบถัดไป:** 12.6 CSP enforce · offline form sync queue · idempotency ครอบกล่อง/rejection · Redis
 
 ---
 

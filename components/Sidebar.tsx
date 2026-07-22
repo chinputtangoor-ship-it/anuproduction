@@ -3,26 +3,26 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
+import { useAccess } from "@/lib/auth/AccessProvider";
 import {
   APP_MENU,
-  GLOBAL_MENU_ITEMS,
   getVisibleMenuItems,
   getVisibleSections,
 } from "@/lib/navigation/menu";
-import type { Department } from "@/lib/constants/departments";
 import type { UserRole } from "@/lib/auth/types";
 import { useI18n } from "@/lib/i18n/context";
 
 export function Sidebar({
   role,
-  department,
 }: {
   role: string;
-  department?: Department | null;
+  /** @deprecated D23 — department no longer scopes sidebar sections */
+  department?: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
+  const { getAccess } = useAccess();
   const userRole = role as UserRole;
 
   const initialOpen = APP_MENU.reduce<Record<string, boolean>>((acc, section) => {
@@ -36,7 +36,7 @@ export function Sidebar({
   const toggle = (sectionKey: string) =>
     setOpen((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
 
-  const visibleSections = getVisibleSections(userRole, department);
+  const visibleSections = getVisibleSections(userRole);
 
   return (
     <aside
@@ -50,39 +50,25 @@ export function Sidebar({
           style={{
             background: pathname === "/dashboard" ? "rgba(124,92,255,0.15)" : "transparent",
             color: pathname === "/dashboard" ? "var(--color-anu-glow)" : "var(--color-anu-muted)",
-            borderLeft: pathname === "/dashboard" ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
+            borderLeft:
+              pathname === "/dashboard"
+                ? "3px solid var(--color-anu-accent)"
+                : "3px solid transparent",
           }}
         >
           <AppIcon name="home" size={18} />
           <span>{t("common.home")}</span>
         </button>
-        {GLOBAL_MENU_ITEMS.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <button
-              key={item.href}
-              onClick={() => router.push(item.href)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition"
-              style={{
-                background: active ? "rgba(124,92,255,0.15)" : "transparent",
-                color: active ? "var(--color-anu-glow)" : "var(--color-anu-muted)",
-                borderLeft: active ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
-              }}
-            >
-              <AppIcon name={item.icon} size={18} />
-              <span>{t(item.labelKey)}</span>
-            </button>
-          );
-        })}
       </nav>
 
       <div className="px-3 mb-2" style={{ borderBottom: "1px solid var(--color-anu-border)" }} />
 
       <nav className="flex flex-col gap-0.5 px-3">
         {visibleSections.map((section) => {
-          const visibleItems = getVisibleMenuItems(section, userRole);
+          const visibleItems = getVisibleMenuItems(section, getAccess);
           const isOpen = open[section.sectionKey] ?? false;
           const hasActive = visibleItems.some((item) => item.href === pathname);
+          const catalogEmpty = section.items.length === 0;
 
           return (
             <div key={section.sectionKey}>
@@ -92,7 +78,10 @@ export function Sidebar({
                 style={{
                   color: hasActive ? "var(--color-anu-glow)" : "var(--color-anu-text)",
                   background: hasActive && !isOpen ? "rgba(124,92,255,0.08)" : "transparent",
-                  borderLeft: hasActive && !isOpen ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
+                  borderLeft:
+                    hasActive && !isOpen
+                      ? "3px solid var(--color-anu-accent)"
+                      : "3px solid transparent",
                 }}
               >
                 <div className="flex items-center gap-3">
@@ -118,6 +107,7 @@ export function Sidebar({
                   {visibleItems.length > 0 ? (
                     visibleItems.map((item) => {
                       const active = pathname === item.href;
+                      const level = getAccess(item.menuKey);
                       return (
                         <button
                           key={item.href}
@@ -126,17 +116,26 @@ export function Sidebar({
                           style={{
                             background: active ? "rgba(124,92,255,0.15)" : "transparent",
                             color: active ? "var(--color-anu-glow)" : "var(--color-anu-muted)",
-                            borderLeft: active ? "3px solid var(--color-anu-accent)" : "3px solid transparent",
+                            borderLeft: active
+                              ? "3px solid var(--color-anu-accent)"
+                              : "3px solid transparent",
                           }}
                         >
                           <AppIcon name={item.icon} size={16} />
-                          <span>{t(item.labelKey)}</span>
+                          <span className="flex-1">{t(item.labelKey)}</span>
+                          {level === "read" && (
+                            <span className="text-[10px] uppercase" style={{ color: "var(--color-anu-warning)" }}>
+                              R
+                            </span>
+                          )}
                         </button>
                       );
                     })
                   ) : (
                     <p className="px-3 py-2 text-xs italic" style={{ color: "var(--color-anu-muted)" }}>
-                      — {t("common.coming_soon")} —
+                      {catalogEmpty
+                        ? `— ${t("common.coming_soon")} —`
+                        : `— ${t("access.no_menus")} —`}
                     </p>
                   )}
                 </div>

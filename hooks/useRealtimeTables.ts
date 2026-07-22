@@ -3,7 +3,14 @@
 import { useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-type HotTable = "boxes" | "production_plan" | "rejection" | "backlog" | "profiles";
+type HotTable =
+  | "boxes"
+  | "production_plan"
+  | "rejection"
+  | "backlog"
+  | "camera_inspection"
+  | "repass"
+  | "profiles";
 
 export function useRealtimeTables({
   enabled,

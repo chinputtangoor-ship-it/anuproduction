@@ -98,6 +98,10 @@ export default function AccountPage() {
       showMsg(t("user.err_invalid_username"), "error");
       return;
     }
+    if (!department) {
+      showMsg(t("user.err_department_required"), "error");
+      return;
+    }
 
     const dup = users.find(u => u.username === finalUn);
     if (dup) { showMsg(t("user.err_dup_username", { name: finalUn }), "error"); return; }
@@ -112,7 +116,7 @@ export default function AccountPage() {
         username: finalUn,
         password: finalPw,
         role,
-        department: department || null,
+        department,
         birth_date: birthDate || null,
         join_date: joinDate || null,
       }),
@@ -146,6 +150,10 @@ export default function AccountPage() {
 
   async function handleSaveEdit() {
     if (!editFn.trim() || !editUn.trim()) { showMsg(t("user.err_empty_fields"), "error"); return; }
+    if (!editDepartment) {
+      showMsg(t("user.err_department_required"), "error");
+      return;
+    }
     const dup = users.find(u => u.username === editUn.trim() && u.id !== editingUser.id);
     if (dup) { showMsg(t("user.err_dup_username_edit"), "error"); return; }
 
@@ -158,7 +166,7 @@ export default function AccountPage() {
         emp_id: editEid.trim() || null,
         username: editUn.trim(),
         role: editRole,
-        department: editDepartment || null,
+        department: editDepartment,
         birth_date: editBirthDate || null,
         join_date: editJoinDate || null,
       }),
@@ -307,10 +315,12 @@ export default function AccountPage() {
                 </select>
               </div>
               <div>
-                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.department")}</p>
+                <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                  {t("user.department")} *
+                </p>
                 <select value={department} onChange={e => setDepartment(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
-                  <option value="">—</option>
+                  className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none min-h-[44px]" style={inputStyle}>
+                  <option value="">{t("user.department_placeholder")}</option>
                   {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`department.${d}`)}</option>)}
                 </select>
               </div>
@@ -398,10 +408,12 @@ export default function AccountPage() {
                     </select>
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.department")}</p>
+                    <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>
+                      {t("user.department")} *
+                    </p>
                     <select value={editDepartment} onChange={e => setEditDepartment(e.target.value)}
-                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
-                      <option value="">—</option>
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none min-h-[44px]" style={inputStyle}>
+                      <option value="">{t("user.department_placeholder")}</option>
                       {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`department.${d}`)}</option>)}
                     </select>
                   </div>

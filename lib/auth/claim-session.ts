@@ -10,15 +10,29 @@ export type SessionCheckResult =
   | { status: "skipped" }
   | { status: "error"; message: string };
 
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sess-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+async function postSession(body: Record<string, unknown>): Promise<Response> {
+  return fetch("/api/auth/session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": newIdempotencyKey(),
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function checkOrClaimSession(): Promise<SessionCheckResult> {
   const deviceId = getOrCreateDeviceId();
   const deviceLabel = getDeviceLabel();
 
-  const res = await fetch("/api/auth/session", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "check", deviceId, deviceLabel }),
-  });
+  const res = await postSession({ action: "check", deviceId, deviceLabel });
 
   const data = await res.json();
   if (!res.ok) {
@@ -44,11 +58,7 @@ export async function claimSessionOnThisDevice(): Promise<SessionCheckResult> {
   const deviceId = getOrCreateDeviceId();
   const deviceLabel = getDeviceLabel();
 
-  const res = await fetch("/api/auth/session", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "claim", deviceId, deviceLabel }),
-  });
+  const res = await postSession({ action: "claim", deviceId, deviceLabel });
 
   const data = await res.json();
   if (!res.ok) {

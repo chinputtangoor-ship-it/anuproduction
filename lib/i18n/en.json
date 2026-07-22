@@ -54,11 +54,34 @@
     "user_account": "User Account",
     "box_grade": "Box Grade",
     "batch_detail": "Batch Detail",
-    "planner_dash": "Planner Dashboard",
-    "quality_dash": "Quality Dashboard",
-    "production_dash": "Production Dashboard",
-    "post_dash": "Post Production Dashboard",
-    "features": "Features"
+    "planner_dash": "Ops Dashboard",
+    "quality_dash": "Ops Dashboard",
+    "production_dash": "Ops Dashboard",
+    "post_dash": "Ops Dashboard",
+    "features": "Features",
+    "access_control": "Access control"
+  },
+  "access": {
+    "title": "Access control",
+    "subtitle": "Default layer is Department + Position (users must have both). Position-wide is optional for the whole factory. Individual overrides both. Use Revoke to remove a grant at the selected layer.",
+    "mode_user": "Individual user",
+    "mode_dept_pos": "Position in department (default)",
+    "mode_position": "Position (whole factory)",
+    "user": "User",
+    "position": "Position",
+    "menu": "Menu",
+    "section": "Department",
+    "level": "Access",
+    "level_none": "Revoke",
+    "level_read": "Read",
+    "level_edit": "Edit",
+    "save": "Save access",
+    "saved": "Access saved.",
+    "pick_user": "Please select a user.",
+    "pick_target": "Please select department and position.",
+    "no_menus": "No menus granted",
+    "read_only": "Read only",
+    "revoke_hint": "Revoke deletes the grant at this layer only. A wider layer (e.g. whole-factory position) may still apply."
   },
   "features": {
     "title": "Feature toggles",
@@ -293,6 +316,8 @@
     "err_dup_username": "Username \"{{name}}\" This user is already in the system.",
     "err_save_failed": "Saving failed.",
     "err_empty_fields": "The name and username cannot be empty.",
+    "err_department_required": "Department is required (with position) for access grants.",
+    "department_placeholder": "Select department",
     "err_dup_username_edit": "This username is already in use.",
     "err_update_failed": "Update failed.",
     "err_delete_admin": "The Administrator account cannot be deleted.",
@@ -360,7 +385,11 @@
     "col_start": "Start",
     "col_complete": "Complete",
     "col_done_by": "Done by",
-    "reason_normal": "Normal Re-pass"
+    "reason_normal": "Normal Re-pass",
+    "rejection_kg_title": "Rejection weight (for Material Balance)",
+    "rejection_kg_sub": "Optional — leave 0 if none. Saved to Rejection table.",
+    "rejection_kg": "Rejection (kg)",
+    "rejection_kg_saved": "Rejection {{kg}} kg recorded"
   },
   "plan": {
     "title": "Production Plan",
@@ -536,6 +565,30 @@
     "no_pending": "No pending work.",
     "footer_updated": "Latest processing"
   },
+  "ops": {
+    "kpi_strip": "Key indicators",
+    "kpi_running_batches": "Running batches",
+    "kpi_running_batches_sub": "Batches in Running",
+    "kpi_all_plans": "All plans",
+    "kpi_planing": "Planing",
+    "kpi_running": "Running",
+    "kpi_finished": "Finished",
+    "line_status_title": "Production line status",
+    "online": "Online",
+    "offline": "Offline",
+    "running_n": "{{n}} running",
+    "box_status_by_line": "Box status by line",
+    "material_balance": "Material Balance (Good / Reject %)",
+    "material_balance_sub": "Good kg = AF net weight · Reject kg = Rejection total · % of (Good + Reject)",
+    "by_line": "By line",
+    "by_batch": "By batch",
+    "overall": "Overall",
+    "batch_status_by_line": "Batch status by line",
+    "due_within_7": "Due within 7 days",
+    "no_due_soon": "No batches due within 7 days.",
+    "top_defects": "Top defects",
+    "top_defects_sub": "From boxes graded Sort, PS, Scrap, or HFX (most to least)"
+  },
   "position": {
     "admin": "Admin",
     "manager": "Manager",
@@ -559,7 +612,10 @@
     "check_by": "Check by (automatic)",
     "save_box": "Save grade",
     "saved_msg": "Graded box {{box}} ({{status}}) — sent to Post Production",
-    "no_batch": "No batches currently running on {{line}}",
-    "alert_no_defect": "Please select at least one defect."
+    "no_batch": "No Planing or Running batches on {{line}}",
+    "alert_no_defect": "Please select at least one defect.",
+    "first_box_starts": "Grading box #1 will start this batch (Planing → Running).",
+    "batch_started": "Batch started (Running)",
+    "start_batch_warn": "Grade saved, but batch could not be started: {{error}}"
   }
 }

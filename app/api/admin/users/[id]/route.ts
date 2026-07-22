@@ -4,6 +4,7 @@ import { isValidPosition } from "@/lib/auth/permissions";
 import { DEPARTMENTS, isDepartment } from "@/lib/constants/departments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
+import { hardenApiRequest } from "@/lib/security/harden-route";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,12 @@ function parseDepartment(raw: unknown): string | null | "__invalid__" {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["PATCH"],
+  });
+  if (blocked) return blocked;
+
   const adminProfile = await requireAdmin();
   if (!adminProfile) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -78,7 +85,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["DELETE"],
+    requireJson: false,
+  });
+  if (blocked) return blocked;
+
   const adminProfile = await requireAdmin();
   if (!adminProfile) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

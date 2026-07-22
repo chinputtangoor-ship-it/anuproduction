@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppIcon } from "@/components/AppIcon";
 import { PRODUCTION_LINES } from "@/lib/constants/production";
-import { fetchRunningBatches } from "@/lib/data/production";
+import {
+  fetchBatchesByStatus,
+  type BatchStatusFilter,
+  type ProductionBatch,
+} from "@/lib/data/production";
 import {
   readProductionContext,
   writeProductionContext,
@@ -23,6 +27,10 @@ type ProductionFlowShellProps = {
   batchCols?: 2 | 4;
   headerExtra?: ReactNode;
   resumeContext?: boolean;
+  /** Default: Running only. Box Grade passes Planing + Running. */
+  batchStatuses?: BatchStatusFilter[];
+  /** Show Planing/Running badge on batch buttons when listing mixed statuses */
+  showBatchStatus?: boolean;
   onBatchReady?: (line: string, batch: string) => void;
   children: (ctx: { line: string; batch: string }) => ReactNode;
 };
@@ -40,6 +48,8 @@ export function ProductionFlowShell({
   batchCols = 2,
   headerExtra,
   resumeContext = true,
+  batchStatuses = ["Running"],
+  showBatchStatus = false,
   onBatchReady,
   children,
 }: ProductionFlowShellProps) {
@@ -49,21 +59,26 @@ export function ProductionFlowShell({
   const [step, setStep] = useState<FlowStep>("line");
   const [selLine, setSelLine] = useState("");
   const [selBatch, setSelBatch] = useState("");
-  const [batches, setBatches] = useState<{ batch: string }[]>([]);
+  const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [resumed, setResumed] = useState(false);
 
-  const loadBatches = useCallback(async (line: string) => {
-    setLoadingBatches(true);
-    try {
-      const data = await fetchRunningBatches(line);
-      setBatches(data);
-    } catch {
-      setBatches([]);
-    } finally {
-      setLoadingBatches(false);
-    }
-  }, []);
+  const statusKey = batchStatuses.slice().sort().join(",");
+
+  const loadBatches = useCallback(
+    async (line: string) => {
+      setLoadingBatches(true);
+      try {
+        const data = await fetchBatchesByStatus(line, batchStatuses);
+        setBatches(data);
+      } catch {
+        setBatches([]);
+      } finally {
+        setLoadingBatches(false);
+      }
+    },
+    [batchStatuses],
+  );
 
   const selectBatch = useCallback(
     (line: string, batch: string) => {
@@ -85,7 +100,7 @@ export function ProductionFlowShell({
       return;
     }
 
-    fetchRunningBatches(ctx.line)
+    fetchBatchesByStatus(ctx.line, batchStatuses)
       .then((data) => {
         if (data.some((item) => item.batch === ctx.batch)) {
           setSelLine(ctx.line);
@@ -96,7 +111,9 @@ export function ProductionFlowShell({
         }
       })
       .finally(() => setResumed(true));
-  }, [resumeContext, resumed, onBatchReady]);
+    // statusKey tracks batchStatuses array identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- statusKey encodes batchStatuses
+  }, [resumeContext, resumed, onBatchReady, statusKey]);
 
   const handleSelectLine = (line: string) => {
     setSelLine(line);
@@ -218,16 +235,31 @@ export function ProductionFlowShell({
               </p>
             ) : (
               <div className={batchGridClass}>
-                {batches.map((item) => (
-                  <button
-                    key={item.batch}
-                    onClick={() => selectBatch(selLine, item.batch)}
-                    className="py-4 px-4 rounded-xl border text-sm font-semibold transition hover:scale-105"
-                    style={cardStyle}
-                  >
-                    <span style={{ color: "var(--color-anu-text)" }}>{item.batch}</span>
-                  </button>
-                ))}
+                {batches.map((item) => {
+                  const isPlaning = item.batch_status === "Planing";
+                  return (
+                    <button
+                      key={item.batch}
+                      onClick={() => selectBatch(selLine, item.batch)}
+                      className="py-4 px-4 rounded-xl border text-sm font-semibold transition hover:scale-105"
+                      style={cardStyle}
+                    >
+                      <span style={{ color: "var(--color-anu-text)" }}>{item.batch}</span>
+                      {showBatchStatus && (
+                        <p
+                          className="text-xs mt-1 font-medium"
+                          style={{
+                            color: isPlaning
+                              ? "var(--color-anu-warning)"
+                              : "var(--color-anu-success)",
+                          }}
+                        >
+                          {item.batch_status}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

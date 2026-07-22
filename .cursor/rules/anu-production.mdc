@@ -10,6 +10,7 @@ alwaysApply: true
 - You are senior full-stack for **ANU Production** (shop-floor manufacturing app), not Quantum Core ERP Engine.
 - Owner is a **shop-floor expert** — explain steps in plain language.
 - **Read docs before coding:** `docs/decisions.md` · `docs/roadmap.md` · `docs/ui-ux-spec.md` · `docs/qa-skill.md`
+- For access / sidebar / grants also read: `docs/phase-11-configurable-access.md`
 - **Scoped changes only** — fix only what was asked; no drive-by refactors.
 - **No code until docs are agreed** for large features — Architect's Summary first.
 - Flag security / data-integrity risks before implementing.
@@ -39,18 +40,31 @@ Warehouse (รับวัตถุดิบ)
 - **QC Form** (`/quality` measurement form): **freeze** — do not change until roadmap says otherwise.
 - **Box Grade** is the new Quality flow that feeds Post Production Box Status.
 
-## Departments & visibility
+## Departments, positions & access (D23–D26)
 
-Departments (extra user field alongside existing `role`): `Planner` · `Quality` · `Production` · `Post Production` · `Warehouse` · `Human Resources` · `Account`
+**Position (`role`):** `admin` · `manager` · `supervisor` · `operator`  
+**Department:** extra field alongside role (D5) — does **not** replace role.
 
-- `department` does **not** replace `role` — both coexist.
-- **admin / manager** see all department menus.
-- **supervisor** sees **only their own department** (department field required).
-- Other roles: primarily their department when set; otherwise role-based sections.
-- **All departments can view plans (read-only)** — Phase 3.
-- Dashboards now: Planner · Quality · Production · Post Production.
-- Production dashboard (Phase 5) = KPIs from **existing data only** — no new Production entry screens required first.
-- Dashboards later: Warehouse · HR · Account — **do not build yet**.
+### Target model (Phase 11)
+
+- Sidebar shows **all department section headers** to everyone.
+- Section **User** (Users · Features · Access control) = **admin only**.
+- **Sub-menu items** appear only when admin granted access: `read` or `edit` (D25).
+- Grants: **individual** · **department+position (default layer)** · **position factory-wide (optional)** (D26).
+- Resolve priority: user > department+position > position > none. Revoke = delete grant at that layer.
+- New users **must** have department + position (D28).
+- Full design: `docs/phase-11-configurable-access.md` — **do not invent ad-hoc ACL** outside that doc.
+
+### Planner section (D24 · D27)
+
+- **Ops Dashboard:** `/dashboard/planner` · menu key `ops_dashboard`.
+- **Production Plan:** `/plan` · menu key `plan` — under Planner, **not** next to Home.
+- Other old dashboard routes redirect to `/dashboard/planner`.
+- Visibility of both items = Phase 11 grants.
+
+### Do not build yet
+
+- Warehouse / HR / Account department screens (Phase 7).
 
 ## Feature locks / moves
 
@@ -58,22 +72,24 @@ Departments (extra user field alongside existing `role`): `Planner` · `Quality`
 |------|------|
 | QC Form | Keep as-is — no work |
 | Box Grade (Quality) | Per **box**: Line → Batch → Box → Grade → Defect (if grade not in AF/HP/HUP) → Save → **that box only** appears in Post Production; ungraded boxes stay hidden |
-| Defect list | Use `docs/defect-list.md` (replace old `DEFECT_LIST` in Phase 2) |
-| Box Status (Post Production) | Remove Grade + Defect pickers; keep Weight (+ related fields); show grade/defect read-only from QC |
-| Plan | Excel import — columns = **full** current plan form (incl. ink/roller etc.) |
-| Scrap/Defect Pareto | Remove; replace with Rejection chart **by line** |
-| Batch detail | Search → open batch → full fields + per-box history + edit |
-| Analytics | Raise Post Production analytics to international KPI standard; pattern for other dept dashboards |
+| Box Grade batches | Planing + Running selectable (D21); grading box #1 on Planing starts batch (D20) |
+| Defect list | Use `docs/defect-list.md` |
+| Box Status (Post Production) | No Grade/Defect pickers; Weight only; grade/defect read-only from QC |
+| Plan | Excel import — full plan form columns; edit requires grant/`canEditPlan` until Phase 11 |
+| Scrap/Defect Pareto | Removed; Rejection **by line** |
+| Ops Dashboard | Planner menu only (D24); widgets per phase-10a |
+| Access control UI | Admin-only under User — Phase 11 |
 | PWA icons | Use owner-provided ANU logo assets |
 
 ## Coding standards (non-negotiable)
 
 - **Clean, modular code** — never dump long god-files; split by feature/module.
 - **Calculation logic lives in dedicated modules** (e.g. `lib/calculations/`) — easy to change later.
+- **Access resolution** (when Phase 11 lands) lives in `lib/auth/access*` — not scattered if-checks in every page.
 - **Auto-stamp actor** on every create/update from **logged-in user id** (`recorded_by` / `updated_by` / Check by / Weight by / Inspector — never free-typed names).
 - **Icons:** `lucide-react` only — **no emoji in UI**.
 - Prefer existing patterns in `lib/`, `components/`, `app/`.
-- Security: no `service_role` in browser; validate inputs server-side; role checks on routes/API.
+- Security: no `service_role` in browser; validate inputs server-side; enforce **read vs edit** on writes, not only hide buttons.
 - Honor `docs/decisions.md` — do not re-ask settled items unless owner changes them.
 
 ## Docs map
@@ -84,4 +100,8 @@ Departments (extra user field alongside existing `role`): `Planner` · `Quality`
 | `docs/roadmap.md` | Phase scope · what to build next |
 | `docs/ui-ux-spec.md` | Layout · icons · dept UX · PWA |
 | `docs/defect-list.md` | Official defect strings |
+| `docs/phase-10a-unified-ops-dashboard.md` | Ops Dashboard widgets / formulas |
+| `docs/phase-10b-batch-start-grade-repass.md` | Batch start · grade · re-pass kg |
+| `docs/phase-11-configurable-access.md` | Sidebar + grants + Access control admin |
+| `docs/phase-12-api-pwa-security.md` | API rate limit · headers/CSP · SW TTL · session idempotency |
 | `docs/qa-skill.md` | Before merge / deploy |

@@ -26,7 +26,14 @@ export function useDashboardBundle() {
 
   useRealtimeTables({
     enabled: realtimeOn && !!user,
-    tables: ["boxes", "production_plan", "rejection"],
+    tables: [
+      "boxes",
+      "production_plan",
+      "rejection",
+      "backlog",
+      "camera_inspection",
+      "repass",
+    ],
     onEvent: () => {
       void swr.mutate();
     },

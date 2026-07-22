@@ -6,6 +6,7 @@ import {
 } from "@/lib/features/registry";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
+import { hardenApiRequest } from "@/lib/security/harden-route";
 
 async function requireAdmin() {
   const { profile } = await getSessionProfile();
@@ -15,7 +16,14 @@ async function requireAdmin() {
   return profile;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["GET"],
+    requireJson: false,
+  });
+  if (blocked) return blocked;
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -53,6 +61,12 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["PATCH"],
+  });
+  if (blocked) return blocked;
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

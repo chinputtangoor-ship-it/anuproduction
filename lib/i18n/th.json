@@ -54,11 +54,34 @@
     "user_account": "จัดการผู้ใช้",
     "box_grade": "Box Grade",
     "batch_detail": "รายละเอียดแบตช์",
-    "planner_dash": "แดชบอร์ด Planner",
-    "quality_dash": "แดชบอร์ด Quality",
-    "production_dash": "แดชบอร์ด Production",
-    "post_dash": "แดชบอร์ด Post Production",
-    "features": "ฟีเจอร์"
+    "planner_dash": "Ops Dashboard",
+    "quality_dash": "Ops Dashboard",
+    "production_dash": "Ops Dashboard",
+    "post_dash": "Ops Dashboard",
+    "features": "ฟีเจอร์",
+    "access_control": "จัดการสิทธิ์เข้าถึง"
+  },
+  "access": {
+    "title": "จัดการสิทธิ์เข้าถึง",
+    "subtitle": "ชั้นหลักคือ แผนก+ตำแหน่ง (ผู้ใช้ต้องมีทั้งคู่) · ตำแหน่งทั้งโรงงานใช้เมื่ออยากให้ตำแหน่งนั้นทุกแผนกเห็นหน้าเดียวกัน · รายบุคคลทับทั้งสองชั้น · กดถอนสิทธิ์เพื่อลบ grant ที่ชั้นที่เลือก",
+    "mode_user": "รายบุคคล",
+    "mode_dept_pos": "ตำแหน่งในแผนก (ค่าเริ่มต้น)",
+    "mode_position": "ตำแหน่งทั้งโรงงาน",
+    "user": "ผู้ใช้",
+    "position": "ตำแหน่ง",
+    "menu": "เมนู",
+    "section": "แผนก",
+    "level": "สิทธิ์",
+    "level_none": "ถอนสิทธิ์",
+    "level_read": "อ่าน",
+    "level_edit": "แก้ไข",
+    "save": "บันทึกสิทธิ์",
+    "saved": "บันทึกสิทธิ์แล้ว",
+    "pick_user": "กรุณาเลือกผู้ใช้",
+    "pick_target": "กรุณาเลือกแผนกและตำแหน่ง",
+    "no_menus": "ยังไม่มีเมนูที่เปิดสิทธิ์",
+    "read_only": "ดูอย่างเดียว",
+    "revoke_hint": "ถอนสิทธิ์ = ลบ grant เฉพาะชั้นที่เลือก · ถ้ายังมีสิทธิ์ชั้นกว้างกว่า (เช่น ตำแหน่งทั้งโรงงาน) อาจยังเข้าได้"
   },
   "features": {
     "title": "เปิด/ปิดฟีเจอร์",
@@ -293,6 +316,10 @@
     "err_dup_username": "ชื่อผู้ใช้ \"{{name}}\" มีในระบบแล้ว",
     "err_save_failed": "บันทึกไม่สำเร็จ",
     "err_empty_fields": "ชื่อและชื่อผู้ใช้ห้ามว่าง",
+    "err_department_required": "ต้องเลือกแผนก (คู่กับตำแหน่ง) เพื่อรับสิทธิ์เมนู",
+    "department_placeholder": "เลือกแผนก",
+    "err_department_required": "ต้องเลือกแผนก (คู่กับตำแหน่ง) เพื่อรับสิทธิ์เมนู",
+    "department_placeholder": "เลือกแผนก",
     "err_dup_username_edit": "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว",
     "err_update_failed": "อัปเดตไม่สำเร็จ",
     "err_delete_admin": "ไม่สามารถลบบัญชีผู้ดูแลระบบได้",
@@ -360,7 +387,11 @@
     "col_start": "เริ่ม",
     "col_complete": "เสร็จ",
     "col_done_by": "ทำโดย",
-    "reason_normal": "Re-pass ปกติ"
+    "reason_normal": "Re-pass ปกติ",
+    "rejection_kg_title": "น้ำหนักของเสีย (สำหรับ Material Balance)",
+    "rejection_kg_sub": "ไม่บังคับ — ว่างหรือ 0 = ไม่บันทึก · ค่า > 0 จะเข้าตาราง Rejection",
+    "rejection_kg": "ของเสีย (kg)",
+    "rejection_kg_saved": "บันทึกของเสีย {{kg}} kg แล้ว"
   },
   "plan": {
     "title": "แผนการผลิต",
@@ -536,6 +567,30 @@
     "no_pending": "ไม่มีงานค้าง",
     "footer_updated": "อัปเดตล่าสุด"
   },
+  "ops": {
+    "kpi_strip": "ตัวชี้วัดสำคัญ",
+    "kpi_running_batches": "แบตช์ที่กำลังผลิต",
+    "kpi_running_batches_sub": "จำนวนแบตช์สถานะ Running",
+    "kpi_all_plans": "แผนทั้งหมด",
+    "kpi_planing": "Planing",
+    "kpi_running": "Running",
+    "kpi_finished": "Finished",
+    "line_status_title": "สถานะไลน์การผลิต",
+    "online": "Online",
+    "offline": "Offline",
+    "running_n": "กำลังผลิต {{n}} แบตช์",
+    "box_status_by_line": "สถานะกล่องแยกตามไลน์",
+    "material_balance": "Material Balance (% ของดี / ของเสีย)",
+    "material_balance_sub": "ของดี kg = น้ำหนักสุทธิกล่อง AF · ของเสีย kg = Rejection · % จาก (ดี+เสีย)",
+    "by_line": "แยกตามไลน์",
+    "by_batch": "แยกตามแบตช์",
+    "overall": "รวม",
+    "batch_status_by_line": "สถานะแบตช์แยกตามไลน์",
+    "due_within_7": "ครบกำหนดภายใน 7 วัน",
+    "no_due_soon": "ไม่มีแบตช์ที่ครบกำหนดใน 7 วัน",
+    "top_defects": "Defect ยอดนิยม",
+    "top_defects_sub": "จากกล่องเกรด Sort, PS, Scrap, HFX (เรียงมากไปน้อย)"
+  },
   "position": {
     "admin": "ผู้ดูแลระบบ",
     "manager": "ผู้จัดการ",
@@ -559,7 +614,10 @@
     "check_by": "Check by (อัตโนมัติ)",
     "save_box": "บันทึกเกรด",
     "saved_msg": "บันทึกเกรดกล่อง {{box}} ({{status}}) สำเร็จ — ส่งไป Post Production แล้ว",
-    "no_batch": "ไม่มีแบตช์ที่กำลังผลิตใน {{line}}",
-    "alert_no_defect": "กรุณาเลือก Defect อย่างน้อย 1 รายการ"
+    "no_batch": "ไม่มีแบตช์ Planing หรือ Running ใน {{line}}",
+    "alert_no_defect": "กรุณาเลือก Defect อย่างน้อย 1 รายการ",
+    "first_box_starts": "เกรดกล่องที่ 1 จะเริ่มแบตช์นี้ (Planing → Running)",
+    "batch_started": "เริ่มแบตช์แล้ว (Running)",
+    "start_batch_warn": "เกรดบันทึกแล้ว แต่เริ่มแบตช์ไม่สำเร็จ: {{error}}"
   }
 }

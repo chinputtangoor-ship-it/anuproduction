@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/supabase/server";
+import { hardenApiRequest } from "@/lib/security/harden-route";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -13,7 +14,14 @@ function generatePassword(): string {
   return pwd.split("").sort(() => Math.random() - 0.5).join("");
 }
 
-export async function POST(_request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteParams) {
+  const blocked = await hardenApiRequest(request, {
+    bucket: "admin",
+    methods: ["POST"],
+    requireJson: false,
+  });
+  if (blocked) return blocked;
+
   const { profile } = await getSessionProfile();
   if (!profile || profile.role !== "admin" || !profile.is_active) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
