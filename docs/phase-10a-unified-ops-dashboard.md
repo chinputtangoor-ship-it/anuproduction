@@ -54,6 +54,8 @@ Filter: `LinePeriodFilter` (line + period + Custom) — same as Phase 9
 | Material Balance Reject kg | Σ Rejection `total_kg` |
 | Material Balance Good % | Good / (Good + Reject) × 100 · if sum=0 → show em dash |
 | Material Balance Reject % | Reject / (Good + Reject) × 100 |
+| Material Balance **By line / Overall** | ตามตัวกรอง Line + Period |
+| Material Balance **By batch** | นับ**ทั้งแบตช์เสมอ** (กรอง Line ได้ · ไม่ตัด Period) |
 | Top defects | parse `defects` CSV on boxes in Sort/PS/Scrap/HFX only · sort desc |
 | Awaiting Re-pass | latest row per `batch__box_number` where status ≠ AF |
 

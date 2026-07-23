@@ -149,7 +149,7 @@ Helper รวมใน `lib/` (เช่น `lib/security/`) — ห้ามก
 
 ## 9) Deploy note
 
-- รัน migration `supabase/migrations/20260722044327_phase12_api_pwa_security.sql` บน Supabase **ก่อน**พึ่ง rate limit / idempotency บน production
+- รัน migration `supabase/migrations/20260722114615_phase12_api_pwa_security.sql` บน Supabase **ก่อน**พึ่ง rate limit / idempotency บน production
 - ถ้ายังไม่รัน migration: rate limit / idempotency **fail-open** (ไม่บล็อก API) แต่ log error
 - ตรวจ login + `/api/auth/session` + admin users + bootstrap หลัง deploy
 

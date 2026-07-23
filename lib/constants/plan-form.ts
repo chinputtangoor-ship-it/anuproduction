@@ -1,7 +1,8 @@
 import { CUSTOMER_NAMES, COUNTRIES, METAL_OPTIONS, BOX_PACKING, INK_OPTIONS } from "@/lib/constants/plan-options";
 import { withCreatedBy } from "@/lib/audit/stamp";
+import { sortAsc } from "@/lib/sort/asc";
 
-export const BATCH_STATUS = ["Planing", "Running", "Finished"] as const;
+export const BATCH_STATUS = sortAsc(["Planing", "Running", "Finished"] as const);
 
 export type PlanFormValues = {
   line: string;
@@ -44,9 +45,9 @@ export function emptyPlanForm(): PlanFormValues {
     semifinish_code: "",
     item_qty_million: "",
     need_af_box: "",
-    customer_name: CUSTOMER_NAMES[0],
+    customer_name: "ACG NORTH AMERCA LLC",
     country: "Thailand",
-    box_packing: BOX_PACKING[0],
+    box_packing: "Box 660",
     planned_finish_date: "",
     to_be_desp_on: "",
     metal_detector: "Normal",
@@ -73,9 +74,9 @@ export function planToFormValues(plan: Record<string, unknown>): PlanFormValues 
     semifinish_code: String(plan.semifinish_code ?? ""),
     item_qty_million: plan.item_qty_million != null ? String(plan.item_qty_million) : "",
     need_af_box: plan.need_af_box != null ? String(plan.need_af_box) : "",
-    customer_name: String(plan.customer_name ?? CUSTOMER_NAMES[0]),
+    customer_name: String(plan.customer_name ?? "ACG NORTH AMERCA LLC"),
     country: String(plan.country ?? "Thailand"),
-    box_packing: String(plan.box_packing ?? BOX_PACKING[0]),
+    box_packing: String(plan.box_packing ?? "Box 660"),
     planned_finish_date:
       typeof plan.planned_finish_date === "string" ? plan.planned_finish_date.slice(0, 10) : "",
     to_be_desp_on: typeof plan.to_be_desp_on === "string" ? plan.to_be_desp_on.slice(0, 10) : "",

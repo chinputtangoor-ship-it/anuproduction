@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { sortByAsc } from "@/lib/sort/asc";
 
 export type BatchStatusFilter = "Planing" | "Running" | "Finished";
 
@@ -33,7 +34,7 @@ export async function fetchBatchesByStatus(
     .order("batch");
 
   if (error) throw error;
-  return data ?? [];
+  return sortByAsc(data ?? [], (row) => row.batch);
 }
 
 export async function isBatchRunning(line: string, batch: string): Promise<boolean> {

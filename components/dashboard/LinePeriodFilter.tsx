@@ -4,6 +4,7 @@ import { PRODUCTION_LINES } from "@/lib/constants/production";
 import type { CustomRange, PeriodKey } from "@/lib/calculations/period";
 import { todayIso } from "@/lib/calculations/period";
 import { useI18n } from "@/lib/i18n/context";
+import { sortByAsc } from "@/lib/sort/asc";
 
 const PERIODS: PeriodKey[] = [
   "All",
@@ -64,6 +65,8 @@ export function LinePeriodFilter({
     color: "var(--color-anu-text)",
   };
 
+  const periodsSorted = sortByAsc(PERIODS, (p) => periodLabel(p, t));
+
   return (
     <div className="flex flex-col gap-3 mb-6">
       <div className="flex flex-wrap gap-3">
@@ -91,7 +94,7 @@ export function LinePeriodFilter({
             className="rounded-lg border px-3 py-2 text-sm outline-none min-w-[160px] min-h-[44px]"
             style={inputStyle}
           >
-            {PERIODS.map((p) => (
+            {periodsSorted.map((p) => (
               <option key={p} value={p}>
                 {periodLabel(p, t)}
               </option>

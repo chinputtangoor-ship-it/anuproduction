@@ -19,6 +19,7 @@ import { POSITIONS } from "@/lib/auth/permissions";
 import { DEPARTMENTS } from "@/lib/constants/departments";
 import { saveAccessMatrix } from "@/lib/data/access-grants";
 import { useI18n } from "@/lib/i18n/context";
+import { sortByAsc } from "@/lib/sort/asc";
 import { supabase } from "@/lib/supabase";
 
 type Mode = GrantScope;
@@ -52,8 +53,9 @@ export default function AccessControlPage() {
         .select("id, fullname, username")
         .eq("is_active", true)
         .order("fullname");
-      setUsers(data ?? []);
-      if (data?.[0]) setUserId(data[0].id);
+      const sorted = sortByAsc(data ?? [], (u) => `${u.fullname} ${u.username}`);
+      setUsers(sorted);
+      if (sorted[0]) setUserId(sorted[0].id);
     })();
   }, [authLoading, user, router]);
 
@@ -219,7 +221,7 @@ export default function AccessControlPage() {
                     color: "var(--color-anu-text)",
                   }}
                 >
-                  {DEPARTMENTS.map((d) => (
+                  {sortByAsc(DEPARTMENTS, (d) => t(`department.${d}`)).map((d) => (
                     <option key={d} value={d}>
                       {t(`department.${d}`)}
                     </option>
@@ -240,7 +242,7 @@ export default function AccessControlPage() {
                     color: "var(--color-anu-text)",
                   }}
                 >
-                  {POSITIONS.map((p) => (
+                  {sortByAsc(POSITIONS, (p) => t(`position.${p}`)).map((p) => (
                     <option key={p} value={p}>
                       {t(`position.${p}`)}
                     </option>
@@ -265,7 +267,7 @@ export default function AccessControlPage() {
                   color: "var(--color-anu-text)",
                 }}
               >
-                {POSITIONS.map((p) => (
+                {sortByAsc(POSITIONS, (p) => t(`position.${p}`)).map((p) => (
                   <option key={p} value={p}>
                     {t(`position.${p}`)}
                   </option>

@@ -1,12 +1,21 @@
-export const PRODUCTION_LINES = Array.from(
-  { length: 13 },
-  (_, i) => `H5${String(i + 1).padStart(2, "0")}`,
+import { sortAsc } from "@/lib/sort/asc";
+
+export const PRODUCTION_LINES = sortAsc(
+  Array.from({ length: 13 }, (_, i) => `H5${String(i + 1).padStart(2, "0")}`),
 );
 
-export const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"] as const;
+export const BOX_STATUS = sortAsc([
+  "AF",
+  "HP",
+  "HUP",
+  "Sort",
+  "PS",
+  "Scrap",
+  "HFX",
+] as const);
 
-/** Official factory defect list — docs/defect-list.md */
-export const DEFECT_LIST = [
+/** Official factory defect list — docs/defect-list.md (display order A→Z). */
+export const DEFECT_LIST = sortAsc([
   "Hole",
   "Foreign Capsul",
   "Uncut Cap",
@@ -61,7 +70,7 @@ export const DEFECT_LIST = [
   "Dark Print",
   "Minor Skewing",
   "Big Skewing",
-] as const;
+] as const);
 
 export const STATUS_COLORS: Record<string, string> = {
   AF: "var(--color-anu-success)",
@@ -73,7 +82,7 @@ export const STATUS_COLORS: Record<string, string> = {
   Scrap: "var(--color-anu-danger)",
 };
 
-export const STATUSES_WITHOUT_DEFECT = ["AF", "HP", "HUP"] as const;
+export const STATUSES_WITHOUT_DEFECT = sortAsc(["AF", "HP", "HUP"] as const);
 
 export type BoxStatus = (typeof BOX_STATUS)[number];
 

@@ -4,14 +4,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { withRecordedBy } from "@/lib/audit/stamp";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { PRODUCTION_LINES } from "@/lib/constants/production";
+import { BOX_STATUS, PRODUCTION_LINES } from "@/lib/constants/production";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { AppIcon } from "@/components/AppIcon";
 import { FormSkeleton } from "@/components/ui/Skeleton";
+import { sortAsc } from "@/lib/sort/asc";
 
-const BOX_STATUS = ["AF", "HP", "HUP", "Sort", "PS", "Scrap", "HFX"];
-const DEFECT_LIST = ["Bubble", "Mashed", "Dent cap", "Dent body", "Loose", "Rough edge", "Ink speck", "Soiled", "Dirty", "Skewing", "Machine breakdown"];
+const DEFECT_LIST = sortAsc([
+  "Bubble",
+  "Mashed",
+  "Dent cap",
+  "Dent body",
+  "Loose",
+  "Rough edge",
+  "Ink speck",
+  "Soiled",
+  "Dirty",
+  "Skewing",
+  "Machine breakdown",
+]);
 
 export default function RepassPage() {
   const router = useRouter();
@@ -74,13 +86,13 @@ export default function RepassPage() {
 
   async function loadActiveLines() {
     const { data } = await supabase.from("boxes").select("line").neq("status", "AF");
-    const unique = [...new Set((data || []).map((d: any) => d.line))].sort();
+    const unique = sortAsc([...new Set((data || []).map((d: { line: string }) => d.line))]);
     setActiveLines(unique);
   }
 
   async function loadActiveBatches(line: string) {
     const { data } = await supabase.from("boxes").select("batch").eq("line", line).neq("status", "AF");
-    const unique = [...new Set((data || []).map((d: any) => d.batch))];
+    const unique = sortAsc([...new Set((data || []).map((d: { batch: string }) => d.batch))]);
     setActiveBatches(unique);
   }
 
@@ -526,7 +538,7 @@ export default function RepassPage() {
                   {t("repass.type_and_time")}
                 </p>
                 <div className="flex gap-2 mb-4">
-                  {["Online", "Offline"].map(m => (
+                  {sortAsc(["Online", "Offline"]).map(m => (
                     <button key={m} onClick={() => setMode(m as any)}
                       className="flex-1 py-2 rounded-lg text-sm font-medium border-2 transition"
                       style={{

@@ -1,7 +1,14 @@
+import { sortAsc } from "@/lib/sort/asc";
+
 /** Four shop-floor positions — access is combined with `department`. */
 export type UserRole = "admin" | "manager" | "supervisor" | "operator";
 
-export const POSITIONS: UserRole[] = ["admin", "manager", "supervisor", "operator"];
+export const POSITIONS: UserRole[] = sortAsc([
+  "admin",
+  "manager",
+  "supervisor",
+  "operator",
+] as const);
 
 const LEGACY_ROLE_MAP: Record<string, UserRole> = {
   admin: "admin",

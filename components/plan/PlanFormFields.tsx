@@ -10,6 +10,7 @@ import {
   METAL_OPTIONS,
   type PlanFormValues,
 } from "@/lib/constants/plan-form";
+import { sortAsc } from "@/lib/sort/asc";
 
 const inputStyle = {
   background: "var(--color-anu-elevated)",
@@ -205,8 +206,11 @@ export function PlanFormFields({ values, onChange, readOnly = false }: PlanFormF
 
       <Field label="Print">
         <Select value={values.print_type} onChange={(e) => set("print_type", e.target.value)} {...selectProps}>
-          <option value="U">U</option>
-          <option value="P">P</option>
+          {sortAsc(["P", "U"]).map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
         </Select>
       </Field>
 

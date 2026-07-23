@@ -21,7 +21,7 @@
 | D15 | Client cache + Realtime | ใช้ **SWR** (ไม่ใช้ TanStack Query) · Supabase **Realtime** บนตารางร้อน · คุมด้วย feature flag |
 | D16 | Feature Toggle | Admin เปิด/ปิดในแอปได้ทันที (`role === admin` เท่านั้นเห็นเมนู+API) · flags: `realtime` · `pwa_install_banner` · `single_session` · `swr_client_cache` |
 | D17 | Unified Ops Dashboard | Widgets ชุดเดียว (Phase 10A) · **ตำแหน่งเมนูถูกแก้โดย D24** — อยู่ใต้ Planner · มอบสิทธิ์ผ่าน Phase 11 |
-| D18 | Material Balance | ของดี kg = Σ AF `net_weight_kg` · ของเสีย kg = Σ Rejection `total_kg` · Good% / Reject% = ส่วนของ (ดี+เสีย) · แยก Line + Batch · รวม=0 แสดง `—` |
+| D18 | Material Balance | ของดี kg = Σ AF `net_weight_kg` · ของเสีย kg = Σ Rejection `total_kg` · Good% / Reject% = ส่วนของ (ดี+เสีย) · แยก Line + Batch · รวม=0 แสดง `—` · **By batch นับทั้งแบตช์เสมอ** (ไม่ตัด Period; กรอง Line ได้) · By line / Overall ตาม Period |
 | D19 | Scrap Rate | นับเฉพาะกล่อง `status === Scrap` / จำนวนกล่องทั้งหมด × 100 — **ไม่** นับทุก non-AF เป็น scrap |
 | D20 | Start batch 2 ทาง | (1) ปุ่ม Start ในแผน (2) QC เกรดกล่องที่ 1 ของ batch Planing → Running อัตโนมัติ · ดู [phase-10b](./phase-10b-batch-start-grade-repass.md) |
 | D21 | Box Grade batches | Box Grade เลือก batch **Planing + Running** · หน้ากรอกอื่น (Record / Rejection / …) ยัง Running อย่างเดียว |

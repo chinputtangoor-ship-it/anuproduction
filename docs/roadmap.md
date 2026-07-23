@@ -308,7 +308,7 @@ Phase 1 Foundations
 
 **ส่งมอบ:** `access_menu_grant` · AccessProvider · `/user/access` · Plan ใต้ Planner · Ops Dashboard ใต้ Planner
 
-**Deploy note:** รัน `supabase/migrations/20260722130000_phase11_access_grants.sql`
+**Deploy note:** รัน `supabase/migrations/20260722112734_phase11_access_grants.sql` (+ seed `20260722113227_…`)
 
 ---
 
@@ -326,7 +326,7 @@ Phase 1 Foundations
 
 ดู [phase-12-api-pwa-security.md](./phase-12-api-pwa-security.md) · มติ D29–D33
 
-**Deploy note:** รัน `20260722044327_phase12_api_pwa_security.sql` ก่อนพึ่ง rate limit / idempotency
+**Deploy note:** รัน `20260722114615_phase12_api_pwa_security.sql` ก่อนพึ่ง rate limit / idempotency
 
 **ค้างรอบถัดไป:** 12.6 CSP enforce · offline form sync queue · idempotency ครอบกล่อง/rejection · Redis
 

@@ -178,7 +178,7 @@ Admin ปรับ/ถอนได้ที่ `/user/access`
 
 ## 5) ส่งมอบโค้ด
 
-1. Migration `20260722130000_phase11_access_grants.sql` + seed  
+1. Migration `20260722112734_phase11_access_grants.sql` + seed `20260722113227_…`  
 2. `lib/auth/access.ts` · `menu-catalog.ts` · `AccessProvider`  
 3. Sidebar / Home hub — ทุกแผนก · กรองเมนูย่อยตาม grant · Plan ใต้ Planner  
 4. Route guard ใน AccessProvider  

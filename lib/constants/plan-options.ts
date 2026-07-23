@@ -1,13 +1,15 @@
-export const CUSTOMER_NAMES = [
+import { sortAsc } from "@/lib/sort/asc";
+
+export const CUSTOMER_NAMES = sortAsc([
   "ACG NORTH AMERCA LLC",
   "FAME Pharma Pte ltd",
   "PT.ACG Indonesia",
   "COMMUNITY PHARMACY PUBLIC",
   "ERNEST CHEMIST LTD",
   "Gel strength Co Ltd (Head office)",
-];
+]);
 
-export const COUNTRIES = [
+export const COUNTRIES = sortAsc([
   "Thailand",
   "Indonesia",
   "USA",
@@ -15,11 +17,11 @@ export const COUNTRIES = [
   "Myanmar",
   "Singapore",
   "Vietnam",
-];
+]);
 
-export const METAL_OPTIONS = ["Normal", "Iron Oxide"];
+export const METAL_OPTIONS = sortAsc(["Normal", "Iron Oxide"]);
 
-export const BOX_PACKING = [
+export const BOX_PACKING = sortAsc([
   "Box 660",
   "Box 675",
   "Box 705",
@@ -27,9 +29,9 @@ export const BOX_PACKING = [
   "Box 760+EPS Sheet",
   "Box Tabsule",
   "Box Fsample",
-];
+]);
 
-export const INK_OPTIONS = [
+export const INK_OPTIONS = sortAsc([
   "-",
   "RMI010004 Black ACG",
   "RMI010021 White ACG",
@@ -38,4 +40,4 @@ export const INK_OPTIONS = [
   "RMI010002 Black TEK",
   "RMI010057 Green TEK",
   "RMI010033 Yellow/Gold TEK",
-];
+]);

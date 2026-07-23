@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { withRecordedBy } from "@/lib/audit/stamp";
 import { FormSkeleton } from "@/components/ui/Skeleton";
+import { sortAsc } from "@/lib/sort/asc";
 
 export default function QualityPage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -235,7 +236,7 @@ export default function QualityPage() {
                           }}
                         >
                           <option value="">{t("quality.select")}</option>
-                          {field.options?.map((o) => (
+                          {sortAsc(field.options ?? []).map((o) => (
                             <option key={o} value={o}>{o}</option>
                           ))}
                         </select>

@@ -1,5 +1,7 @@
+import { sortAsc } from "@/lib/sort/asc";
+
 /** Shop-floor departments — extra field alongside `role` (docs/decisions.md D5). */
-export const DEPARTMENTS = [
+export const DEPARTMENTS = sortAsc([
   "planner",
   "quality",
   "production",
@@ -7,7 +9,7 @@ export const DEPARTMENTS = [
   "warehouse",
   "human_resources",
   "account",
-] as const;
+] as const);
 
 export type Department = (typeof DEPARTMENTS)[number];
 

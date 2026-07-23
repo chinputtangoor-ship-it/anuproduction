@@ -71,7 +71,7 @@ export const QC_SECTIONS: QcSectionDef[] = [
     fields: [
       { key: "attr_color", type: "text" },
       { key: "attr_texture", type: "text" },
-      { key: "attr_result", type: "select", options: ["Pass", "Fail", "Hold"] },
+      { key: "attr_result", type: "select", options: ["Fail", "Hold", "Pass"] },
     ],
   },
   {

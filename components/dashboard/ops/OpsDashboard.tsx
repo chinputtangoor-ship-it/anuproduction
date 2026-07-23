@@ -114,6 +114,11 @@ export function OpsDashboard({ title, icon = "chart" }: Props) {
       line === "All" ? plans : plans.filter((p) => (p as { line: string }).line === line);
     const boxesForLatest =
       line === "All" ? boxes : boxes.filter((b) => (b as { line: string }).line === line);
+    // Material Balance By batch: whole batch always (line filter only, ignore period).
+    const rejectionsForBatch =
+      line === "All"
+        ? rejections
+        : rejections.filter((r) => (r as { line: string }).line === line);
 
     return computeOpsDashboardKpis({
       plans: fPlans as never[],
@@ -121,6 +126,7 @@ export function OpsDashboard({ title, icon = "chart" }: Props) {
       boxes: fBoxes as never[],
       boxesForLatest: boxesForLatest as never[],
       rejections: fRej as never[],
+      rejectionsForBatch: rejectionsForBatch as never[],
       backlog: fBacklog as never[],
       camera: fCamera as never[],
       repass: fRepass as never[],
@@ -457,8 +463,11 @@ export function OpsDashboard({ title, icon = "chart" }: Props) {
           )}
         </div>
         <div className="rounded-xl border p-4" style={cardStyle}>
-          <p className="text-sm font-semibold mb-3" style={{ color: OPS.text }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: OPS.text }}>
             {t("ops.by_batch")}
+          </p>
+          <p className="text-xs mb-3" style={{ color: OPS.muted }}>
+            {t("ops.by_batch_sub")}
           </p>
           {kpis.materialBalance.byBatch.length > 0 ? (
             <div className="overflow-x-auto max-h-[360px] overflow-y-auto">

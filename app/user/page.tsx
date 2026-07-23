@@ -11,6 +11,7 @@ import { DEPARTMENTS } from "@/lib/constants/departments";
 import { POSITIONS } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/types";
 import { normalizeRole } from "@/lib/auth/types";
+import { sortByAsc } from "@/lib/sort/asc";
 
 const ROLES = POSITIONS;
 
@@ -307,7 +308,7 @@ export default function AccountPage() {
                 <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.position")}</p>
                 <select value={role} onChange={e => setRole(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
-                  {ROLES.map((r) => (
+                  {sortByAsc(ROLES, (r) => t(`position.${r}`)).map((r) => (
                     <option key={r} value={r}>
                       {t(`position.${r}`)}
                     </option>
@@ -321,7 +322,9 @@ export default function AccountPage() {
                 <select value={department} onChange={e => setDepartment(e.target.value)}
                   className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none min-h-[44px]" style={inputStyle}>
                   <option value="">{t("user.department_placeholder")}</option>
-                  {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`department.${d}`)}</option>)}
+                  {sortByAsc(DEPARTMENTS, (d) => t(`department.${d}`)).map((d) => (
+                    <option key={d} value={d}>{t(`department.${d}`)}</option>
+                  ))}
                 </select>
               </div>
 
@@ -400,11 +403,11 @@ export default function AccountPage() {
                     <p className="text-xs mb-1" style={{ color: "var(--color-anu-muted)" }}>{t("user.position")}</p>
                     <select value={editRole} onChange={e => setEditRole(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none" style={inputStyle}>
-                      {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {t(`position.${r}`)}
-                    </option>
-                  ))}
+                      {sortByAsc(ROLES, (r) => t(`position.${r}`)).map((r) => (
+                        <option key={r} value={r}>
+                          {t(`position.${r}`)}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -414,7 +417,9 @@ export default function AccountPage() {
                     <select value={editDepartment} onChange={e => setEditDepartment(e.target.value)}
                       className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none min-h-[44px]" style={inputStyle}>
                       <option value="">{t("user.department_placeholder")}</option>
-                      {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`department.${d}`)}</option>)}
+                      {sortByAsc(DEPARTMENTS, (d) => t(`department.${d}`)).map((d) => (
+                        <option key={d} value={d}>{t(`department.${d}`)}</option>
+                      ))}
                     </select>
                   </div>
 

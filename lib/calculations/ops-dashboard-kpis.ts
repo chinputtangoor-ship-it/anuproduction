@@ -184,6 +184,11 @@ export function computeOpsDashboardKpis(input: {
   /** Unfiltered (or line-only) boxes for latest-status / awaiting re-pass */
   boxesForLatest: OpsBoxRow[];
   rejections: OpsRejectionRow[];
+  /**
+   * Line-only rejections (not period) — Material Balance By batch always
+   * sums the whole batch (D18 / Ops Dashboard).
+   */
+  rejectionsForBatch?: OpsRejectionRow[];
   backlog: OpsBacklogRow[];
   camera: OpsCameraRow[];
   repass: OpsRepassRow[];
@@ -194,6 +199,7 @@ export function computeOpsDashboardKpis(input: {
     boxes,
     boxesForLatest,
     rejections,
+    rejectionsForBatch = rejections,
     backlog,
     camera,
     repass,
@@ -246,7 +252,14 @@ export function computeOpsDashboardKpis(input: {
     return { line, counts, total: rows.length };
   });
 
-  const materialBalance = computeMaterialBalance(latestFiltered, rejections);
+  // By line / overall follow the period filter; By batch always uses full batch totals.
+  const materialBalancePeriod = computeMaterialBalance(latestFiltered, rejections);
+  const materialBalanceFullBatch = computeMaterialBalance(latestAll, rejectionsForBatch);
+  const materialBalance = {
+    byLine: materialBalancePeriod.byLine,
+    overall: materialBalancePeriod.overall,
+    byBatch: materialBalanceFullBatch.byBatch,
+  };
 
   const camByLine: Record<
     string,
